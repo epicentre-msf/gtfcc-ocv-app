@@ -1,0 +1,9 @@
+shiny-template.Rproj
+.Rproj.user
+.Rhistory
+.Rdata
+.httr-oauth
+.DS_Store
+data
+logs
+.cache
