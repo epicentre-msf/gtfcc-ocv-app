@@ -1,3 +1,8 @@
+google_font <- function(font) {
+  font <- stringr::str_replace_all(font, " ", "+")
+  glue::glue("https://fonts.googleapis.com/css2?family={font}:wght@300;400;700&display=swap")
+}
+
 div_reactive <- function(...) {
   tags$div(class = "reactive-width", ...)
 }
@@ -18,7 +23,7 @@ health_icon <- function(icon, type = "filled", format = "svg", height = 25) {
   )
 }
 
-picker_opts <- function(actions = TRUE, search = FALSE, none_text = "", selected_text = "selected") {
+picker_opts <- function(actions = TRUE, search = FALSE, none_text = "All", selected_text = "selected") {
   shinyWidgets::pickerOptions(
     actionsBox = actions,
     liveSearch = search,
@@ -144,7 +149,7 @@ box_w_dropdown_inputs <- function(..., title, inputs, width = 6, height = NULL, 
   )
 }
 
-valueBoxSpark <- function(value, title, sparkobj = NULL, subtitle, info = NULL,
+valueBoxSpark <- function(value, title, sparkobj = NULL, subtitle = NULL, info = NULL,
                           icon = NULL, color = "aqua", width = 3, href = NULL){
 
   shinydashboard:::validateColor(color)
@@ -169,10 +174,10 @@ valueBoxSpark <- function(value, title, sparkobj = NULL, subtitle, info = NULL,
     div(
       class = "inner",
       tags$small(title),
-      if (!is.null(sparkobj)) info_icon,
+      if (!is.null(info)) info_icon,
       h3(value),
       if (!is.null(sparkobj)) sparkobj,
-      p(subtitle)
+      if (!is.null(subtitle)) p(subtitle)
     ),
     # bs3 icon-large
     # bs4 icon

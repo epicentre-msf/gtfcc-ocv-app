@@ -1,0 +1,28 @@
+ui <- tagList(
+  tags$head(
+    tags$link(href = google_font(app_font), rel = "stylesheet"),
+    tags$link(rel = "stylesheet", type = "text/css", href = "styles.css"),
+    # tags$script(src = "addNavLink.js"),
+    shinyjs::useShinyjs(),
+    shinyWidgets::useShinydashboard(),
+    pushbar::pushbar_deps(),
+    waiter::use_waiter(),
+    sever::useSever(),
+    cicerone::use_cicerone()
+  ),
+  
+  navbarPage(
+    title = app_title,
+    windowTitle = app_title,
+    position = "fixed-top",
+    collapsible = TRUE,
+    id = "tabs",
+    
+    # navbar tabs here
+    tabPanel(
+      title = "Requests", value = "request", icon = icon("list"),
+      mod_request_ui("request")
+    )
+  ),
+  waiter_preloader(html = spin_3())
+)
