@@ -1,5 +1,5 @@
 # sync data dir with server
-rsync -zavh ~/epicentre/gtffc-ocv-app/data sp:/home/epicentre/gtffc-ocv-app
+rsync -zavh /Users/paul/epicentre/gtfcc-ocv-app/data shinyproxy:/srv/shiny-server/ocv
 
 # clear cache
 ssh shinyproxy "rm -rf /home/epicentre/gtffc-ocv-app/.cache/*"

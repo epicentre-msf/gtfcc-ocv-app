@@ -53,37 +53,50 @@ mod_request_ui <- function(id) {
               size = "sm"
             )
           ),
+          input_right = capture::capture(
+            selector = "#request-map-container",
+            filename = glue::glue("GTFCC-Map-{Sys.Date()}.png"),
+            icon("camera"),
+            "Download",
+            class = "btn-xs"
+          ),
           footer = uiOutput(ns("map_footer")),
-          leaflet::leafletOutput(ns("map"))
-        )
+          tags$div(id = "request-map-container", leaflet::leafletOutput(ns("map")))
+        ),
         
-        # box_w_inputs(
-        #   width = 12,
-        #   title = tagList(shiny::icon("bar-chart"), "Courbe"),
-        #   inputs = tagList(
-        #     shinyWidgets::radioGroupButtons(
-        #       ns("time_unit"), 
-        #       label = NULL, 
-        #       choices = c("Jour" = "day", "Semaine" = "week"), 
-        #       selected = "week",
-        #       size = "sm"
-        #     ),
-        #     shinyWidgets::pickerInput(
-        #       ns("time_var"), 
-        #       label = NULL, 
-        #       choices = c("Date d'inclusion" = "inc_dt"), 
-        #       width = 150
-        #     )
-        #     # shinyWidgets::pickerInput(
-        #     #   ns("group_var_epicurve"), 
-        #     #   label = NULL, 
-        #     #   choices = group_vars, 
-        #     #   width = 150
-        #     # )
-        #   ),
-        #   highcharter::highchartOutput(ns("epicurve")),
-        #   footer = uiOutput(ns("cfr_footer"))
-        # )
+        box_w_inputs(
+          width = 12,
+          title = tagList(shiny::icon("bar-chart")),
+          inputs = tagList(
+            shinyWidgets::radioGroupButtons(
+              ns("ts_unit"),
+              label = NULL,
+              choices = c("Week" = "week", "Month" = "month", "Year" = "year"),
+              selected = "year",
+              size = "sm"
+            ),
+            shinyWidgets::radioGroupButtons(
+              ns("ts_var"),
+              label = NULL,
+              choices = c("Requests", "Doses"),
+              size = "sm"
+            ),
+            shinyWidgets::radioGroupButtons(
+              ns("ts_group"),
+              label = NULL,
+              choices = c("Mechanism" = "request_mechanism", "Status" = "request_status"),
+              size = "sm"
+            ),
+            shinyWidgets::radioGroupButtons(
+              ns("ts_dose"),
+              label = NULL,
+              choices = c("Requested" = "n_dose_request", "Approved" = "n_dose_approve"),
+              size = "sm"
+            )
+          ),
+          highcharter::highchartOutput(ns("ts_chart")),
+          footer = uiOutput(ns("cfr_footer"))
+        )
       )
       
     )
@@ -228,7 +241,8 @@ mod_request_server <- function(id) {
           color = "grey",
           weight = 1,
           fillOpacity = 0,
-          label = sf_world$country,
+          label = ~country,
+          layerId = ~iso_a3,
           group = "Boundaries",
           options = leaflet::pathOptions(pane = "choropleth")
         ) %>%
@@ -240,6 +254,25 @@ mod_request_server <- function(id) {
           width = 0, 
           height = 0
         )
+    })
+    
+    # Region select observers ====================================================
+    
+    # reactive val boolean to indicate if a shape has been selected
+    map_click <- reactiveVal(FALSE)
+    country_select <- reactiveVal(NULL)
+    
+    # if country is selected from map, update country_select value
+    observeEvent(input$map_shape_click$id, {
+      map_click(TRUE)
+      country_select(input$map_shape_click$id)
+    })
+    
+    observeEvent(input$map_click, {
+      if (map_click()) {
+        map_click(FALSE)
+        country_select(NULL)
+      }
     })
     
     observeEvent(input$map_var, {
@@ -305,6 +338,75 @@ mod_request_server <- function(id) {
           type = "pie"
         )
     })
+    
+    #############################################
+    # Time-series
+    #############################################
+    
+    observeEvent(input$ts_var, {
+      cond <- (input$ts_var == "Doses")
+      shinyjs::toggle("ts_dose", condition = cond, anim = TRUE, animType = "fade")
+    })
+    
+    df_ts <- reactive({
+      ts_var <- rlang::sym(input$ts_var)
+      ts_group <- rlang::sym(input$ts_group)
+      
+      if (input$ts_var == "Requests") {
+        
+        df_counts <- df_data() %>% 
+          mutate(time_unit = as_date(floor_date(date_receipt, unit = input$ts_unit))) %>% 
+          mutate(!!ts_group := forcats::fct_infreq(!!ts_group) %>% forcats::fct_explicit_na("Unknown")) %>%
+          count(time_unit, !!ts_group) %>% 
+          arrange(time_unit)
+        
+      } else if (input$ts_var == "Doses") {
+        ts_dose <- rlang::sym(input$ts_dose)
+        
+        df_counts <- df_data() %>% 
+          mutate(time_unit = as_date(floor_date(date_decision, unit = input$ts_unit))) %>% 
+          count(time_unit, !!ts_group, wt = !!ts_dose) %>% 
+          mutate(!!ts_group := forcats::fct_reorder(!!ts_group, n, .desc = T) %>% forcats::fct_explicit_na("Unknown"))
+      }
+      
+      return(df_counts)
+    })
+    
+   output$ts_chart <- renderHighchart({
+     ts_group <- rlang::sym(input$ts_group)
+     
+     # browser()
+     
+     hchart(df_ts() %>% drop_na(time_unit), "column", hcaes(x = time_unit, y = n, group = !!ts_group)) %>% 
+       hc_title(text = NULL) %>%
+       hc_chart(zoomType = "x") %>%
+       hc_xAxis(title = list(text = ""), crosshair = TRUE) %>% 
+       highcharter::hc_yAxis_multiples(
+         list(
+           title = list(text = ""),
+           allowDecimals = FALSE
+         ),
+         list(
+           title = list(text = ""),
+           allowDecimals = FALSE,
+           opposite = TRUE,
+           linkedTo = 0
+         )
+       ) %>%
+       hc_tooltip(shared = TRUE) %>% 
+       hc_credits(enabled = FALSE) %>%
+       hc_legend(
+         title = list(text = ""),
+         layout = "vertical",
+         align = "right",
+         verticalAlign = "top",
+         x = -10,
+         y = 40
+       ) %>% 
+       my_hc_export()
+   })
+    
+    
     
   })
 }

@@ -2,7 +2,7 @@ ui <- tagList(
   tags$head(
     tags$link(href = google_font(app_font), rel = "stylesheet"),
     tags$link(rel = "stylesheet", type = "text/css", href = "styles.css"),
-    # tags$script(src = "addNavLink.js"),
+    tags$script(src = "addNavLink.js"),
     shinyjs::useShinyjs(),
     shinyWidgets::useShinydashboard(),
     pushbar::pushbar_deps(),

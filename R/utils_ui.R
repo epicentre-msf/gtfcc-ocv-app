@@ -74,9 +74,21 @@ value_panel <- function(title, n, width = 3) {
   )
 }
 
-box_custom <- function(..., title = NULL, inputs = NULL, footer = NULL, status = NULL, solidHeader = FALSE,
-                       background = NULL, width = 6, height = NULL, collapsible = FALSE,
-                       collapsed = FALSE, headerId = NULL) {
+box_custom <- function(
+  ..., 
+  title = NULL, 
+  inputs = NULL, 
+  input_right = NULL,
+  footer = NULL, 
+  status = NULL, 
+  solidHeader = FALSE,
+  background = NULL, 
+  width = 6, 
+  height = NULL, 
+  collapsible = FALSE, 
+  collapsed = FALSE,
+  headerId = NULL
+) {
   boxClass <- "box"
   if (solidHeader || !is.null(background)) {
     boxClass <- paste(boxClass, "box-solid")
@@ -113,9 +125,16 @@ box_custom <- function(..., title = NULL, inputs = NULL, footer = NULL, status =
       tags$button(class = paste0("btn btn-box-tool"), `data-widget` = "collapse", shiny::icon(collapseIcon))
     )
   }
+  input_rightTag <- NULL
+  if (!is.null(input_right)) {
+    input_rightTag <- div(
+      class = "box-tools pull-right",
+      input_right
+    )
+  }
   headerTag <- NULL
   if (!is.null(titleTag) || !is.null(collapseTag)) {
-    headerTag <- div(id = headerId, class = "box-header", titleTag, inputs, collapseTag)
+    headerTag <- div(id = headerId, class = "box-header", titleTag, inputs, input_rightTag, collapseTag)
   }
   div(class = if (!is.null(width)) {
     paste0("col-sm-", width)
@@ -126,10 +145,12 @@ box_custom <- function(..., title = NULL, inputs = NULL, footer = NULL, status =
   }))
 }
 
-box_w_inputs <- function(..., title, inputs, width = 6, height = NULL, footer = NULL, headerId = NULL) {
+box_w_inputs <- function(..., title, inputs, input_right = NULL, 
+                         width = 6, height = NULL, footer = NULL, headerId = NULL) {
   box_custom(
     width = width, height = height, solidHeader = TRUE, footer = footer,
-    title = title, inputs = purrr::map(inputs, div_inline), headerId = headerId,
+    title = title, inputs = purrr::map(inputs, div_inline), input_right = input_right, 
+    headerId = headerId,
     ...
   )
 }
