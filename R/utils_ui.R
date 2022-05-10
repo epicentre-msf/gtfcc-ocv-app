@@ -145,7 +145,7 @@ box_custom <- function(
   }))
 }
 
-box_w_inputs <- function(..., title, inputs, input_right = NULL, 
+box_w_inputs <- function(..., title, inputs = NULL, input_right = NULL, 
                          width = 6, height = NULL, footer = NULL, headerId = NULL) {
   box_custom(
     width = width, height = height, solidHeader = TRUE, footer = footer,

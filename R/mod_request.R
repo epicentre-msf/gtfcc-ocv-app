@@ -30,29 +30,51 @@ mod_request_ui <- function(id) {
       ),
       
       fluidRow(
-        box_w_inputs(
-          width = 12,
-          title = tagList(shiny::icon("globe-africa")),
-          inputs = tagList(
-            shinyWidgets::radioGroupButtons(
-              ns("map_var"),
-              label = NULL,
-              choices = c("Requests", "Doses"),
-              size = "sm"
-            ),
-            shinyWidgets::radioGroupButtons(
-              ns("map_group"),
-              label = NULL,
-              choices = c("Mechanism" = "request_mechanism", "Status" = "request_status"),
-              size = "sm"
-            ),
-            shinyWidgets::radioGroupButtons(
-              ns("map_dose"),
-              label = NULL,
-              choices = c("Requested" = "n_dose_request", "Approved" = "n_dose_approve", "Shipped" = "n_dose_ship"),
-              size = "sm"
-            )
+        
+        column(width = 12, tagList(
+          shinyWidgets::radioGroupButtons(
+            ns("var"),
+            label = NULL,
+            choices = c("Requests", "Doses"),
+            size = "sm"
           ),
+          shinyWidgets::radioGroupButtons(
+            ns("group"),
+            label = NULL,
+            choices = c("Mechanism" = "request_mechanism", "Status" = "request_status"),
+            size = "sm"
+          ),
+          shinyWidgets::radioGroupButtons(
+            ns("dose"),
+            label = NULL,
+            choices = c("Requested" = "n_dose_request", "Approved" = "n_dose_approve", "Shipped" = "n_dose_ship"),
+            size = "sm"
+          )
+        ) %>% purrr::map(div_inline)),
+        
+        box_w_inputs(
+          width = 6,
+          title = tagList(shiny::icon("globe-africa")),
+          # inputs = tagList(
+          #   shinyWidgets::radioGroupButtons(
+          #     ns("map_var"),
+          #     label = NULL,
+          #     choices = c("Requests", "Doses"),
+          #     size = "sm"
+          #   ),
+          #   shinyWidgets::radioGroupButtons(
+          #     ns("map_group"),
+          #     label = NULL,
+          #     choices = c("Mechanism" = "request_mechanism", "Status" = "request_status"),
+          #     size = "sm"
+          #   ),
+          #   shinyWidgets::radioGroupButtons(
+          #     ns("map_dose"),
+          #     label = NULL,
+          #     choices = c("Requested" = "n_dose_request", "Approved" = "n_dose_approve", "Shipped" = "n_dose_ship"),
+          #     size = "sm"
+          #   )
+          # ),
           input_right = capture::capture(
             selector = "#request-map-container",
             filename = glue::glue("GTFCC-Map-{Sys.Date()}.png"),
@@ -65,7 +87,7 @@ mod_request_ui <- function(id) {
         ),
         
         box_w_inputs(
-          width = 12,
+          width = 6,
           title = tagList(shiny::icon("bar-chart")),
           inputs = tagList(
             shinyWidgets::radioGroupButtons(
@@ -74,31 +96,30 @@ mod_request_ui <- function(id) {
               choices = c("Year" = "year", "Month" = "month", "Week" = "week"),
               selected = "year",
               size = "sm"
-            ),
-            shinyWidgets::radioGroupButtons(
-              ns("ts_var"),
-              label = NULL,
-              choices = c("Requests", "Doses"),
-              size = "sm"
-            ),
-            shinyWidgets::radioGroupButtons(
-              ns("ts_group"),
-              label = NULL,
-              choices = c("Mechanism" = "request_mechanism", "Status" = "request_status"),
-              size = "sm"
-            ),
-            shinyWidgets::radioGroupButtons(
-              ns("ts_dose"),
-              label = NULL,
-              choices = c("Requested" = "n_dose_request", "Approved" = "n_dose_approve", "Shipped" = "n_dose_ship"),
-              size = "sm"
             )
+            # shinyWidgets::radioGroupButtons(
+            #   ns("ts_var"),
+            #   label = NULL,
+            #   choices = c("Requests", "Doses"),
+            #   size = "sm"
+            # ),
+            # shinyWidgets::radioGroupButtons(
+            #   ns("ts_group"),
+            #   label = NULL,
+            #   choices = c("Mechanism" = "request_mechanism", "Status" = "request_status"),
+            #   size = "sm"
+            # ),
+            # shinyWidgets::radioGroupButtons(
+            #   ns("ts_dose"),
+            #   label = NULL,
+            #   choices = c("Requested" = "n_dose_request", "Approved" = "n_dose_approve", "Shipped" = "n_dose_ship"),
+            #   size = "sm"
+            # )
           ),
           highcharter::highchartOutput(ns("ts_chart")),
           footer = uiOutput(ns("cfr_footer"))
         )
       )
-      
     )
   )
 }
@@ -292,16 +313,16 @@ mod_request_server <- function(id) {
       }
     })
     
-    observeEvent(input$map_var, {
-      cond <- (input$map_var == "Doses")
-      shinyjs::toggle("map_dose", condition = cond, anim = TRUE, animType = "fade")
+    observeEvent(input$var, {
+      cond <- (input$var == "Doses")
+      shinyjs::toggle("dose", condition = cond, anim = TRUE, animType = "fade")
     })
     
     df_map <- reactive({
-      map_var <- rlang::sym(input$map_var)
-      map_group <- rlang::sym(input$map_group)
+      map_var <- rlang::sym(input$var)
+      map_group <- rlang::sym(input$group)
       
-      if (input$map_var == "Requests") {
+      if (input$var == "Requests") {
         
         df_counts <- df_data() %>% 
           drop_na(!!map_group) %>%
@@ -316,15 +337,15 @@ mod_request_server <- function(id) {
           mutate(across(where(is.numeric), as.double)) %>% 
           mutate(across(where(is.double), ~if_else(is.na(.x), 0, .x)))
         
-      } else if (input$map_var == "Doses") {
-        map_dose <- rlang::sym(input$map_dose)
+      } else if (input$var == "Doses") {
+        map_dose <- rlang::sym(input$dose)
         
         df_counts <- df_data() %>% 
           drop_na(!!map_group) %>%
           count(iso_a3, !!map_group, wt = !!map_dose) %>% 
           mutate(!!map_group := forcats::fct_reorder(!!map_group, n, .desc = T)) %>%
           add_count(iso_a3, wt = n, name = "total") %>% 
-          pivot_wider(names_from = input$map_group, values_from = "n", values_fill = 0)
+          pivot_wider(names_from = input$group, values_from = "n", values_fill = 0)
         
         df_map <- sf_world %>% 
           sf::st_drop_geometry() %>% 
@@ -341,7 +362,7 @@ mod_request_server <- function(id) {
       df_map <- df_map()
       chartData <- df_map %>% 
         select(any_of(c("ICG", "GTFCC", "Loan", "Approved", "Not approved", "Pending", "Cancelled")))
-        #select(-country, -iso_a3, -lon, -lat, -total)
+      #select(-country, -iso_a3, -lon, -lat, -total)
       pie_width <- 60 * sqrt(df_map$total) / sqrt(max(df_map$total))
       
       leaflet::leafletProxy("map", session) %>%
@@ -360,18 +381,18 @@ mod_request_server <- function(id) {
     # Time-series
     #############################################
     
-    observeEvent(input$ts_var, {
-      cond <- (input$ts_var == "Doses")
-      shinyjs::toggle("ts_dose", condition = cond, anim = TRUE, animType = "fade")
-    })
+    # observeEvent(input$var, {
+    #   cond <- (input$var == "Doses")
+    #   shinyjs::toggle("ts_dose", condition = cond, anim = TRUE, animType = "fade")
+    # })
     
     df_ts <- reactive({
       df <- df_data()
       # if (!is.null(country_select())) df %<>% filter(iso_a3 == country_select())
-      ts_var <- rlang::sym(input$ts_var)
-      ts_group <- rlang::sym(input$ts_group)
+      ts_var <- rlang::sym(input$var)
+      ts_group <- rlang::sym(input$group)
       
-      if (input$ts_var == "Requests") {
+      if (input$var == "Requests") {
         
         df_counts <- df %>% 
           mutate(time_unit = as_date(floor_date(date_receipt, unit = input$ts_unit))) %>% 
@@ -379,8 +400,8 @@ mod_request_server <- function(id) {
           count(time_unit, !!ts_group) %>% 
           arrange(time_unit)
         
-      } else if (input$ts_var == "Doses") {
-        ts_dose <- rlang::sym(input$ts_dose)
+      } else if (input$var == "Doses") {
+        ts_dose <- rlang::sym(input$dose)
         
         df_counts <- df %>% 
           mutate(time_unit = as_date(floor_date(date_decision, unit = input$ts_unit))) %>% 
@@ -391,37 +412,37 @@ mod_request_server <- function(id) {
       return(df_counts)
     })
     
-   output$ts_chart <- renderHighchart({
-     ts_group <- rlang::sym(input$ts_group)
-     
-     hchart(df_ts() %>% drop_na(time_unit), "column", hcaes(x = time_unit, y = n, group = !!ts_group)) %>% 
-       hc_title(text = NULL) %>%
-       hc_chart(zoomType = "x") %>%
-       hc_xAxis(title = list(text = ""), crosshair = TRUE) %>% 
-       highcharter::hc_yAxis_multiples(
-         list(
-           title = list(text = ""),
-           allowDecimals = FALSE
-         ),
-         list(
-           title = list(text = ""),
-           allowDecimals = FALSE,
-           opposite = TRUE,
-           linkedTo = 0
-         )
-       ) %>%
-       hc_tooltip(shared = TRUE) %>% 
-       hc_credits(enabled = FALSE) %>%
-       hc_legend(
-         title = list(text = ""),
-         layout = "vertical",
-         align = "right",
-         verticalAlign = "top",
-         x = -10,
-         y = 40
-       ) %>% 
-       my_hc_export()
-   })
+    output$ts_chart <- renderHighchart({
+      ts_group <- rlang::sym(input$group)
+      
+      hchart(df_ts() %>% drop_na(time_unit), "column", hcaes(x = time_unit, y = n, group = !!ts_group)) %>% 
+        hc_title(text = NULL) %>%
+        hc_chart(zoomType = "x") %>%
+        hc_xAxis(title = list(text = ""), crosshair = TRUE) %>% 
+        highcharter::hc_yAxis_multiples(
+          list(
+            title = list(text = ""),
+            allowDecimals = FALSE
+          ),
+          list(
+            title = list(text = ""),
+            allowDecimals = FALSE,
+            opposite = TRUE,
+            linkedTo = 0
+          )
+        ) %>%
+        hc_tooltip(shared = TRUE) %>% 
+        hc_credits(enabled = FALSE) %>%
+        hc_legend(
+          title = list(text = ""),
+          layout = "vertical",
+          align = "right",
+          verticalAlign = "top",
+          x = -10,
+          y = 40
+        ) %>% 
+        my_hc_export()
+    })
     
     
     

@@ -12,6 +12,7 @@ library(shinytreeview)
 library(leaflet)
 library(leaflet.minicharts)
 library(highcharter)
+library(capture)
 
 app_name <- "gtfcc_ocv"
 app_title <- "GTFCC OCV"
