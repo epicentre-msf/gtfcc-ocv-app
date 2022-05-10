@@ -49,7 +49,7 @@ mod_request_ui <- function(id) {
             shinyWidgets::radioGroupButtons(
               ns("map_dose"),
               label = NULL,
-              choices = c("Requested" = "n_dose_request", "Approved" = "n_dose_approve"),
+              choices = c("Requested" = "n_dose_request", "Approved" = "n_dose_approve", "Shipped" = "n_dose_ship"),
               size = "sm"
             )
           ),
@@ -71,7 +71,7 @@ mod_request_ui <- function(id) {
             shinyWidgets::radioGroupButtons(
               ns("ts_unit"),
               label = NULL,
-              choices = c("Week" = "week", "Month" = "month", "Year" = "year"),
+              choices = c("Year" = "year", "Month" = "month", "Week" = "week"),
               selected = "year",
               size = "sm"
             ),
@@ -90,7 +90,7 @@ mod_request_ui <- function(id) {
             shinyWidgets::radioGroupButtons(
               ns("ts_dose"),
               label = NULL,
-              choices = c("Requested" = "n_dose_request", "Approved" = "n_dose_approve"),
+              choices = c("Requested" = "n_dose_request", "Approved" = "n_dose_approve", "Shipped" = "n_dose_ship"),
               size = "sm"
             )
           ),
@@ -144,6 +144,7 @@ mod_request_server <- function(id) {
       if (length(input$context)) df %<>% filter(context %in% input$context)
       if (length(input$mechanism)) df %<>% filter(request_mechanism %in% input$mechanism)
       if (length(input$agency)) df %<>% filter(request_agency %in% input$agency)
+      # if (!is.null(country_select())) df %<>% filter(iso_a3 == country_select())
       # if (length(input$vaccin)) df %<>% filter(sc_ocv_recu %in% input$vaccin)
       
       return(df)
@@ -154,7 +155,9 @@ mod_request_server <- function(id) {
     # ==========================================================================
     
     df_summary <- reactive({
-      df_data() %>% 
+      df <- df_data()
+      # if (!is.null(country_select())) df %<>% filter(iso_a3 == country_select())
+      df %>% 
         summarise(
           n_requests = n(),
           n_approved = sum(request_status == "Approved", na.rm = TRUE),
@@ -221,7 +224,7 @@ mod_request_server <- function(id) {
         # leaflet::fitBounds(bbox[["xmin"]], bbox[["ymin"]], bbox[["xmax"]], bbox[["ymax"]]) %>%
         leaflet::addMapPane(name = "choropleth", zIndex = 300) %>%
         leaflet::addMapPane(name = "circles", zIndex = 420) %>%
-        leaflet::addMapPane(name = "district_highlight", zIndex = 430) %>%
+        leaflet::addMapPane(name = "geo_highlight", zIndex = 430) %>%
         leaflet::addMapPane(name = "place_labels", zIndex = 440) %>%
         # leaflet::addProviderTiles("CartoDB.PositronNoLabels", group = "Light") %>%
         # leaflet::addProviderTiles("CartoDB.PositronOnlyLabels", group = "Labels", options = leaflet::leafletOptions(pane = "place_labels")) %>%
@@ -264,14 +267,28 @@ mod_request_server <- function(id) {
     
     # if country is selected from map, update country_select value
     observeEvent(input$map_shape_click$id, {
+      # browser()
+      iso <- input$map_shape_click$id
       map_click(TRUE)
-      country_select(input$map_shape_click$id)
+      country_select(iso)
+      # shp <- sf_world %>% filter(iso_a3 == iso)
+      # leaflet::leafletProxy("map", session) %>%
+      #   leaflet::addPolylines(
+      #     data = shp,
+      #     layerId = "highlight",
+      #     stroke = TRUE,
+      #     opacity = 1,
+      #     weight = 2,
+      #     color = "red",
+      #     options = leaflet::pathOptions(pane = "geo_highlight")
+      #   )
     })
     
     observeEvent(input$map_click, {
       if (map_click()) {
         map_click(FALSE)
-        country_select(NULL)
+        # country_select(NULL)
+        # leaflet::leafletProxy("map", session) %>% leaflet::removeShape("highlight")
       }
     })
     
@@ -349,12 +366,14 @@ mod_request_server <- function(id) {
     })
     
     df_ts <- reactive({
+      df <- df_data()
+      # if (!is.null(country_select())) df %<>% filter(iso_a3 == country_select())
       ts_var <- rlang::sym(input$ts_var)
       ts_group <- rlang::sym(input$ts_group)
       
       if (input$ts_var == "Requests") {
         
-        df_counts <- df_data() %>% 
+        df_counts <- df %>% 
           mutate(time_unit = as_date(floor_date(date_receipt, unit = input$ts_unit))) %>% 
           mutate(!!ts_group := forcats::fct_infreq(!!ts_group) %>% forcats::fct_explicit_na("Unknown")) %>%
           count(time_unit, !!ts_group) %>% 
@@ -363,7 +382,7 @@ mod_request_server <- function(id) {
       } else if (input$ts_var == "Doses") {
         ts_dose <- rlang::sym(input$ts_dose)
         
-        df_counts <- df_data() %>% 
+        df_counts <- df %>% 
           mutate(time_unit = as_date(floor_date(date_decision, unit = input$ts_unit))) %>% 
           count(time_unit, !!ts_group, wt = !!ts_dose) %>% 
           mutate(!!ts_group := forcats::fct_reorder(!!ts_group, n, .desc = T) %>% forcats::fct_explicit_na("Unknown"))
@@ -374,8 +393,6 @@ mod_request_server <- function(id) {
     
    output$ts_chart <- renderHighchart({
      ts_group <- rlang::sym(input$ts_group)
-     
-     # browser()
      
      hchart(df_ts() %>% drop_na(time_unit), "column", hcaes(x = time_unit, y = n, group = !!ts_group)) %>% 
        hc_title(text = NULL) %>%

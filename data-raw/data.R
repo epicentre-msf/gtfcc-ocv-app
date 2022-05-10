@@ -4,7 +4,7 @@ library(readxl)
 
 path_sharepoint <- "~/MSF/EpiDS - GTFCC-OCV/data-clean"
 path_data <- max(dir_ls(path_sharepoint, glob = "*.xlsx"))
-dat <- excel_sheets(path_data) %>% set_names() %>% map(~read_excel(path_data, .x))
+dat <- excel_sheets(path_data) %>% purrr::set_names() %>% map(~read_excel(path_data, .x))
 dat$request <- dat$request %>% 
   mutate(
     request_country = recode(request_country, "Zanzibar" = "Tanzania"),
@@ -12,8 +12,13 @@ dat$request <- dat$request %>%
     .after = request_country
   ) %>% 
   mutate(
-    quarter = lubridate::quarter(date_receipt, with_year = TRUE) %>% 
-      str_replace("\\.", "-Q")
+    quarter = lubridate::quarter(date_receipt, with_year = TRUE) %>% str_replace("\\.", "-Q")
+  ) %>% 
+  left_join(
+    dat$shipment %>% 
+      group_by(id_demand) %>% 
+      summarise(n_dose_ship = sum(n_dose_ship, na.rm = TRUE), .groups = "drop"), 
+    by = "id_demand"
   )
 
 data_dir <- here::here("data")
