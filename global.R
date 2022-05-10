@@ -18,7 +18,7 @@ app_title <- "GTFCC OCV"
 app_font <- "Alegreya Sans"
 
 # local disk cache
-# shiny::shinyOptions(cache = cachem::cache_disk(here::here(".cache")))
+shiny::shinyOptions(cache = cachem::cache_disk(here::here(".cache")))
 
 # Sys.setlocale("LC_TIME", "fr_FR.UTF-8")
 options("lubridate.week.start" = 1)
