@@ -45,19 +45,19 @@ options(
 )
 
 #hc_download_btns <- c("downloadPNG", "downloadJPEG", "downloadSVG", "separator", "downloadCSV", "downloadXLS")
-hc_download_btns <- c("downloadPNG", "downloadJPEG", "downloadSVG")
+hc_download_btns <- c("viewFullscreen", "separator", "downloadPNG", "downloadJPEG", "downloadSVG")
 
 my_hc_export <- function(
   hc,
   title,
   subtitle,
-  credits,
-  colors,
+  credits = "GTFCC | Epicentre",
+  colors = dark2,
   width = 600,
   height = 350,
   dl_buttons = hc_download_btns,
-  dl_text = "Télécharger",
-  filename = "NIGER-SURV-"
+  dl_text = "Download",
+  filename = "GTFCC-"
 ) {
 
   set_hc_val <- function(first, second) {
@@ -76,11 +76,6 @@ my_hc_export <- function(
   colors <- set_hc_val(colors, hc$x$hc_opts$colors)
   credits <- set_hc_val(credits, hc$x$hc_opts$credits$text)
 
-  # title <- ifelse(missing(title), hc$x$hc_opts$title$text, title)
-  # subtitle <- dplyr::if_else(missing(subtitle), hc$x$hc_opts$subtitle$text, subtitle, missing = )
-  # colors <- ifelse(missing(colors), hc$x$hc_opts$colors, colors)
-  # credits <- ifelse(missing(credits), hc$x$hc_opts$credits$text, credits)
-
   legend_title <- stringr::str_remove(hc$x$hc_opts$legend$title$text, "\\(Click to hide\\)")
 
   highcharter::hc_exporting(
@@ -95,8 +90,8 @@ my_hc_export <- function(
     useMultiLevelHeaders = FALSE,
     formAttributes = list(target = "_blank"),
     chartOptions = list(
-      # title = list(text = title),
-      # subtitle = list(text = subtitle),
+      title = list(text = title),
+      subtitle = list(text = subtitle),
       credits = list(enabled = TRUE, text = credits),
       colors = colors,
       legend = list(title = list(text = legend_title)),

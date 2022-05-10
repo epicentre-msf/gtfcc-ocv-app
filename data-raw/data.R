@@ -32,6 +32,6 @@ if (FALSE) {
   library(summarytools)
   walk2(dat, names(dat), ~{
     df_sum <- dfSummary(.x)
-    view(df_sum, method = "browser", file = path("data", .y, ext = "html"))
+    view(df_sum, method = "browser", file = path("data-raw", .y, ext = "html"))
   })
 }
