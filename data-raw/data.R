@@ -4,7 +4,7 @@ library(readxl)
 
 path_sharepoint <- "~/MSF/EpiDS - GTFCC-OCV/data-clean"
 path_data <- max(dir_ls(path_sharepoint, glob = "*.xlsx"))
-dat <- excel_sheets(path_data) %>% purrr::set_names() %>% map(~read_excel(path_data, .x))
+dat <- excel_sheets(path_data) %>% purrr::set_names() %>% map(~qxl::qread(path_data, .x))
 dat$request <- dat$request %>% 
   mutate(
     request_country = recode(request_country, "Zanzibar" = "Tanzania"),
@@ -35,3 +35,4 @@ if (FALSE) {
     view(df_sum, method = "browser", file = path("data-raw", .y, ext = "html"))
   })
 }
+

@@ -13,6 +13,7 @@ library(leaflet)
 library(leaflet.minicharts)
 library(highcharter)
 library(capture)
+library(timevis)
 
 app_name <- "gtfcc_ocv"
 app_title <- "GTFCC OCV"
@@ -27,8 +28,8 @@ options("lubridate.week.start" = 1)
 
 sf_world <- readr::read_rds(here::here("data", "sf_world.rds"))
 df_request <- readr::read_rds(here::here("data", "request.rds"))
-# df_round <- readr::read_rds(here::here("data", "round.rds"))
-# df_shipment <- readr::read_rds(here::here("data", "shipment.rds"))
+df_round <- readr::read_rds(here::here("data", "round.rds"))
+df_shipment <- readr::read_rds(here::here("data", "shipment.rds"))
 
 q_range <- range(df_request$date_receipt, na.rm = TRUE) %>% 
   floor_date("quarter") %>% 

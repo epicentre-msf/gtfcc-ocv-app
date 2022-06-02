@@ -23,6 +23,10 @@ ui <- tagList(
       title = "Requests", value = "request", icon = icon("list"),
       mod_request_ui("request")
     )
+    # tabPanel(
+    #   title = "Timeline", value = "timevis", icon = icon("bar-chart"),
+    #   mod_timevis_ui("timevis")
+    # )
   ),
   waiter_preloader(html = spin_3())
 )

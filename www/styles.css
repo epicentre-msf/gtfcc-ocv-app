@@ -72,11 +72,12 @@ html.pushbar_locked .pushbar_overlay{
 	z-index: 1000 !important;
 }
 
+/*
 .leaflet {
   min-height: 400px;
-  height: -o-calc(100vh - 400px) !important; /* opera */
-  height: -webkit-calc(100vh - 400px) !important; /* google, safari */
-  height: -moz-calc(100vh - 400px) !important; /* firefox */
+  height: -o-calc(100vh - 400px) !important; 
+  height: -webkit-calc(100vh - 400px) !important; 
+  height: -moz-calc(100vh - 400px) !important; 
   height: calc(100vh - 400px) !important;
 }
-
+*/

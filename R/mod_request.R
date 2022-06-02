@@ -24,9 +24,10 @@ mod_request_ui <- function(id) {
       # verbatimTextOutput(outputId = ns("geo_select")),
       
       fluidRow(
-        shinydashboard::valueBoxOutput(ns("n_requests"), width = 4),
-        shinydashboard::valueBoxOutput(ns("n_doses"), width = 4),
-        shinydashboard::valueBoxOutput(ns("n_countries"), width = 4)
+        shinydashboard::valueBoxOutput(ns("n_requests"), width = 3),
+        shinydashboard::valueBoxOutput(ns("n_doses"), width = 3),
+        shinydashboard::valueBoxOutput(ns("n_countries"), width = 3),
+        shinydashboard::valueBoxOutput(ns("time_decision"), width = 3)
       ),
       
       fluidRow(
@@ -55,26 +56,6 @@ mod_request_ui <- function(id) {
         box_w_inputs(
           width = 6,
           title = tagList(shiny::icon("globe-africa")),
-          # inputs = tagList(
-          #   shinyWidgets::radioGroupButtons(
-          #     ns("map_var"),
-          #     label = NULL,
-          #     choices = c("Requests", "Doses"),
-          #     size = "sm"
-          #   ),
-          #   shinyWidgets::radioGroupButtons(
-          #     ns("map_group"),
-          #     label = NULL,
-          #     choices = c("Mechanism" = "request_mechanism", "Status" = "request_status"),
-          #     size = "sm"
-          #   ),
-          #   shinyWidgets::radioGroupButtons(
-          #     ns("map_dose"),
-          #     label = NULL,
-          #     choices = c("Requested" = "n_dose_request", "Approved" = "n_dose_approve", "Shipped" = "n_dose_ship"),
-          #     size = "sm"
-          #   )
-          # ),
           input_right = capture::capture(
             selector = "#request-map-container",
             filename = glue::glue("GTFCC-Map-{Sys.Date()}.png"),
@@ -97,28 +78,26 @@ mod_request_ui <- function(id) {
               selected = "year",
               size = "sm"
             )
-            # shinyWidgets::radioGroupButtons(
-            #   ns("ts_var"),
-            #   label = NULL,
-            #   choices = c("Requests", "Doses"),
-            #   size = "sm"
-            # ),
-            # shinyWidgets::radioGroupButtons(
-            #   ns("ts_group"),
-            #   label = NULL,
-            #   choices = c("Mechanism" = "request_mechanism", "Status" = "request_status"),
-            #   size = "sm"
-            # ),
-            # shinyWidgets::radioGroupButtons(
-            #   ns("ts_dose"),
-            #   label = NULL,
-            #   choices = c("Requested" = "n_dose_request", "Approved" = "n_dose_approve", "Shipped" = "n_dose_ship"),
-            #   size = "sm"
-            # )
           ),
           highcharter::highchartOutput(ns("ts_chart")),
           footer = uiOutput(ns("cfr_footer"))
+        ),
+        
+        box_w_inputs(
+          width = 12,
+          title = tagList("Timeline of demands", tags$small("(select one)")),
+          inputs = tagList(
+            shinyWidgets::pickerInput(
+              inputId = ns("demand"),
+              label = NULL,
+              choices = "",
+              options = picker_opts(search = TRUE),
+              multiple = FALSE
+            )
+          ),
+          timevis::timevisOutput(ns("timevis"))
         )
+        
       )
     )
   )
@@ -179,6 +158,7 @@ mod_request_server <- function(id) {
       df <- df_data()
       # if (!is.null(country_select())) df %<>% filter(iso_a3 == country_select())
       df %>% 
+        mutate(time_decision = date_decision - date_receipt) %>% 
         summarise(
           n_requests = n(),
           n_approved = sum(request_status == "Approved", na.rm = TRUE),
@@ -187,7 +167,10 @@ mod_request_server <- function(id) {
           n_dose_approved = sum(n_dose_approve, na.rm = TRUE),
           pcnt_dose_approved = n_dose_approved / n_dose_requested,
           n_regions = n_distinct(who_region, na.rm = TRUE),
-          n_countries = n_distinct(request_country, na.rm = TRUE)
+          n_countries = n_distinct(request_country, na.rm = TRUE),
+          time_decision_av = round(mean(time_decision, na.rm = TRUE), 1),
+          time_decision_min = min(time_decision, na.rm = TRUE),
+          time_decision_max = max(time_decision, na.rm = TRUE)
         )
     })
     
@@ -229,6 +212,18 @@ mod_request_server <- function(id) {
         subtitle = glue::glue("{scales::number(df_summary()$n_regions)} WHO region(s)"),
         color = "teal",
         icon = icon("globe-africa")
+        # info = "
+      )
+    })
+    
+    output$time_decision <- renderValueBox({
+      valueBoxSpark(
+        width = 12,
+        title = "Avergage decision time",
+        value = glue::glue("{df_summary()$time_decision_av} days"),
+        subtitle = glue::glue("Min: {df_summary()$time_decision_min} days - Max: {df_summary()$time_decision_max} days"),
+        color = "green",
+        icon = icon("clock")
         # info = "
       )
     })
@@ -377,9 +372,9 @@ mod_request_server <- function(id) {
         )
     })
     
-    #############################################
-    # Time-series
-    #############################################
+    # ==========================================================================
+    # TIME-SERIES
+    # ==========================================================================
     
     # observeEvent(input$var, {
     #   cond <- (input$var == "Doses")
@@ -444,7 +439,49 @@ mod_request_server <- function(id) {
         my_hc_export()
     })
     
+    # ==========================================================================
+    # TIMEVIS
+    # ==========================================================================
     
+    df_timevis <- get_timevis_df(df_request, df_shipment, df_round)
+    
+    observe({
+      df_demands <- df_data() %>% distinct(request_country, id_demand) %>% arrange(request_country, desc(id_demand))
+      demands <- split(df_demands$id_demand, df_demands$request_country)
+      # browser()
+      shinyWidgets::updatePickerInput(session, "demand", choices = demands)
+    })
+    
+    output$timevis <- renderTimevis({
+      req(input$demand)
+      
+      df_out <- df_timevis %>% 
+        filter(id_demand == input$demand) %>% 
+        drop_na(start)
+      
+      dates <- unique(df_out$start)
+      
+      start_date <- min(dates) - lubridate::days(3)
+      end_date <- max(dates) + lubridate::days(3)
+      
+      # if (length(dates) == 1) {
+      #   start_date <- dates - 3
+      #   end_date <- dates + 3
+      # } else {
+      #   start_date <- min(dates) - 1
+      #   end_date <- max(dates) + 1
+      # }
+      
+      timevis(
+        df_out,
+        options = list(
+          start = start_date, 
+          end = end_date,
+          fit = FALSE
+          # timeAxis = list(scale = "day")
+        )
+      )
+    })
     
   })
 }
