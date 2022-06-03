@@ -85,7 +85,7 @@ mod_request_ui <- function(id) {
         
         box_w_inputs(
           width = 12,
-          title = tagList("Timeline of demands", tags$small("(select one)")),
+          title = tagList("Request Timeline", tags$small("(select one)")),
           inputs = tagList(
             shinyWidgets::pickerInput(
               inputId = ns("demand"),
@@ -219,7 +219,7 @@ mod_request_server <- function(id) {
     output$time_decision <- renderValueBox({
       valueBoxSpark(
         width = 12,
-        title = "Avergage decision time",
+        title = "Average decision time",
         value = glue::glue("{df_summary()$time_decision_av} days"),
         subtitle = glue::glue("Min: {df_summary()$time_decision_min} days - Max: {df_summary()$time_decision_max} days"),
         color = "green",
