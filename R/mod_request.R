@@ -74,7 +74,7 @@ mod_request_ui <- function(id) {
             shinyWidgets::radioGroupButtons(
               ns("ts_unit"),
               label = NULL,
-              choices = c("Year" = "year", "Month" = "month", "Week" = "week"),
+              choices = c("Year" = "year", "Quarter" = "quarter", "Month" = "month", "Week" = "week"),
               selected = "year",
               size = "sm"
             )
@@ -409,11 +409,25 @@ mod_request_server <- function(id) {
     
     output$ts_chart <- renderHighchart({
       ts_group <- rlang::sym(input$group)
+      df_ts <- df_ts() %>% drop_na(time_unit)
+      if (isolate(input$ts_unit) == "quarter") {
+        df_ts %<>% 
+          mutate(
+            time_lab = quarter(time_unit, with_year = TRUE) %>% str_replace("\\.", "-Q") %>% factor(),
+            time_unit = as.numeric(time_lab)
+          ) %>% 
+          arrange(time_unit)
+        hc <- hchart(df_ts, "column", hcaes(x = time_unit, y = n, group = !!ts_group, name = time_lab))
+        x_type <- "category"
+      } else {
+        hc <- hchart(df_ts, "column", hcaes(x = time_unit, y = n, group = !!ts_group))
+        x_type <- "datetime"
+      }
       
-      hchart(df_ts() %>% drop_na(time_unit), "column", hcaes(x = time_unit, y = n, group = !!ts_group)) %>% 
+      hc %>% 
         hc_title(text = NULL) %>%
         hc_chart(zoomType = "x") %>%
-        hc_xAxis(title = list(text = ""), crosshair = TRUE) %>% 
+        hc_xAxis(type = x_type, title = list(text = ""), crosshair = TRUE) %>% 
         highcharter::hc_yAxis_multiples(
           list(
             title = list(text = ""),
