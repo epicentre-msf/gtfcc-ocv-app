@@ -175,7 +175,7 @@ mod_request_server <- function(id) {
     })
     
     output$n_requests <- renderValueBox({
-      r <-scales::number(df_summary()$n_requests)
+      r <- scales::number(df_summary()$n_requests)
       a <- scales::number(df_summary()$n_approved)
       ap <- scales::percent(df_summary()$pcnt_approved)
       valueBoxSpark(
@@ -190,8 +190,8 @@ mod_request_server <- function(id) {
     })
     
     output$n_doses <- renderValueBox({
-      r <-scales::number(df_summary()$n_dose_requested)
-      a <- scales::number(df_summary()$n_dose_approved)
+      r <- fmt_n_dose(df_summary()$n_dose_requested)
+      a <- fmt_n_dose(df_summary()$n_dose_approved)
       ap <- scales::percent(df_summary()$pcnt_dose_approved)
       valueBoxSpark(
         width = 12,
