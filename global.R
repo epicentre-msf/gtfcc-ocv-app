@@ -14,6 +14,7 @@ library(leaflet.minicharts)
 library(highcharter)
 library(capture)
 library(timevis)
+source(here::here("R", "utils_data.R"))
 
 app_name <- "gtfcc_ocv"
 app_title <- "GTFCC OCV"
@@ -30,6 +31,7 @@ sf_world <- readr::read_rds(here::here("data", "sf_world.rds"))
 df_request <- readr::read_rds(here::here("data", "request.rds"))
 df_round <- readr::read_rds(here::here("data", "round.rds"))
 df_shipment <- readr::read_rds(here::here("data", "shipment.rds"))
+df_timevis <- get_timevis_df(df_request, df_shipment, df_round)
 
 q_range <- range(df_request$date_receipt, na.rm = TRUE) %>% 
   floor_date("quarter") %>% 

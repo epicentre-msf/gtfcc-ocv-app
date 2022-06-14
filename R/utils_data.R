@@ -38,6 +38,7 @@ fmt_status <- function(x) {
 get_timevis_df <- function(df_request, df_shipment, df_round) {
   request <- df_request %>% 
     transmute(
+      event = "request",
       id_demand,
       content = glue::glue(
         "<b>Request</b>", 
@@ -51,6 +52,7 @@ get_timevis_df <- function(df_request, df_shipment, df_round) {
   decision <- df_request %>% 
     mutate(n_dose_approve = na_if(n_dose_approve, 0)) %>% 
     transmute(
+      event = "decision",
       id_demand,
       content = glue::glue(
         "<b>Decision</b>", 
@@ -62,21 +64,34 @@ get_timevis_df <- function(df_request, df_shipment, df_round) {
     )
   
   shipment <- df_shipment %>% 
-    mutate(content = glue::glue(
-      "<b>Delivery</b>", 
-      "{fmt_n_dose(n_dose_ship)} doses of {vaccine}",
-      "Shipment took {replace_na((date_delivery - date_ship), '(unknown)')} days",
-      .sep = "</br>"
-    )) %>% 
-    select(id_demand, content, start = date_delivery)  
+    mutate(
+      content = glue::glue(
+        "<b>Delivery</b>", 
+        "{fmt_n_dose(n_dose_ship)} doses of {vaccine}",
+        "Shipment took {replace_na((date_delivery - date_ship), '(unknown)')} days",
+        .sep = "</br>"
+      ), 
+      event = "shipment"
+    ) %>% 
+    select(event, id_demand, content, start = date_delivery)  
   
   round <- df_round %>% 
     filter(!is.na(round_number)) %>% 
     mutate(
+      event = "round",
       cr = str_sub(id_round, start = -5) %>% replace_na("(Unknown)"),
       content = glue::glue("<b>Round {cr}</b></br>{fmt_n_dose(n_dose_admin)} doses")
     ) %>% 
-    select(id_demand, content, start = date_round)
+    select(event, id_demand, content, start = date_round)
   
-  bind_rows(request, decision, shipment, round)
+  bind_rows(request, decision, shipment, round) %>% 
+    drop_na(start) %>% 
+    left_join(
+      distinct(df_request, id_demand, group = request_country),
+      by = "id_demand"
+    ) %>% 
+    mutate(
+      type = "point", 
+      title = glue::glue("ID: {id_demand} | Date: {format(start, '%d %b %y')}")
+    )
 }

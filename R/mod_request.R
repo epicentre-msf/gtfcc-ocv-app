@@ -457,8 +457,6 @@ mod_request_server <- function(id) {
     # TIMEVIS
     # ==========================================================================
     
-    df_timevis <- get_timevis_df(df_request, df_shipment, df_round)
-    
     observe({
       df_demands <- df_data() %>% distinct(request_country, id_demand) %>% arrange(request_country, desc(id_demand))
       demands <- split(df_demands$id_demand, df_demands$request_country)
