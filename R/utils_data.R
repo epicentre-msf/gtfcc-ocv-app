@@ -25,7 +25,7 @@ fmt_n_dose <- function(n) {
     scales::number(
       n,
       accuracy = .1,
-      scale_cut = c(0, K = 1000, M = 1000000)
+      scale_cut = c(0, K = 1e3, M = 1e6)
     ) %>% str_remove("\\.0")
   }
 }
@@ -60,7 +60,8 @@ get_timevis_df <- function(df_request, df_shipment, df_round) {
         "Decision took {replace_na((date_decision - date_receipt), '(unknown)')} days",
         .sep = "</br>"
       ),
-      start = coalesce(date_decision, date_receipt)
+      # start = coalesce(date_decision, date_receipt)
+      start = date_decision
     )
   
   shipment <- df_shipment %>% 
@@ -84,14 +85,15 @@ get_timevis_df <- function(df_request, df_shipment, df_round) {
     ) %>% 
     select(event, id_demand, content, start = date_round)
   
-  bind_rows(request, decision, shipment, round) %>% 
-    drop_na(start) %>% 
-    left_join(
-      distinct(df_request, id_demand, group = request_country),
-      by = "id_demand"
-    ) %>% 
-    mutate(
-      type = "point", 
-      title = glue::glue("ID: {id_demand} | Date: {format(start, '%d %b %y')}")
-    )
+  bind_rows(request, decision, shipment, round)
+}
+
+
+get_delay_df <- function(df_timeline) {
+  df_timeline %>% 
+    arrange(id_demand, start) %>% 
+    group_by(id_demand, event) %>% 
+    mutate(event = paste(event, row_number(), sep = "_")) %>% 
+    ungroup() %>% 
+    select(id_demand, event, date = start) 
 }

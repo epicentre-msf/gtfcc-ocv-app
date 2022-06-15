@@ -28,10 +28,11 @@ options("lubridate.week.start" = 1)
 # aweek::set_week_start("Monday")
 
 sf_world <- readr::read_rds(here::here("data", "sf_world.rds"))
-df_request <- readr::read_rds(here::here("data", "request.rds"))
-df_round <- readr::read_rds(here::here("data", "round.rds"))
-df_shipment <- readr::read_rds(here::here("data", "shipment.rds"))
-df_timevis <- get_timevis_df(df_request, df_shipment, df_round)
+app_data <- readr::read_rds(here::here("data", "app_data.rds"))
+df_request <- app_data$request
+df_round <- app_data$round
+df_shipment <- app_data$shipment
+df_timevis <- app_data$df_timevis
 
 q_range <- range(df_request$date_receipt, na.rm = TRUE) %>% 
   floor_date("quarter") %>% 

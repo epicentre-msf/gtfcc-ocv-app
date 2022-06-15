@@ -1,6 +1,8 @@
 
 mod_request_ui <- function(id) {
   ns <- NS(id)
+  delay_choices <- delay_choices(app_data$max_shipments, app_data$max_rounds)
+  
   tagList(
     # pushbar inputs ============================
     pushbar_ui(ns),
@@ -54,7 +56,7 @@ mod_request_ui <- function(id) {
         ) %>% purrr::map(div_inline)),
         
         box_w_inputs(
-          width = 6,
+          width = 12,
           title = tagList(shiny::icon("globe-africa")),
           input_right = capture::capture(
             selector = "#request-map-container",
@@ -81,6 +83,35 @@ mod_request_ui <- function(id) {
           ),
           highcharter::highchartOutput(ns("ts_chart")),
           footer = uiOutput(ns("cfr_footer"))
+        ),
+        
+        box_w_inputs(
+          width = 6,
+          title = tagList("Delay distribution"),
+          inputs = tagList(
+            helpText("from:"),
+            shinyWidgets::pickerInput(
+              ns("date_1"),
+              label = NULL,
+              choices = delay_choices,
+              selected = delay_choices[1],
+              options = picker_opts(actions = FALSE, search = FALSE),
+              width = 150,
+              multiple = FALSE
+            ),
+            helpText("to:"),
+            shinyWidgets::pickerInput(
+              ns("date_2"),
+              label = NULL,
+              choices = delay_choices,
+              selected = delay_choices[2],
+              options = picker_opts(actions = FALSE, search = FALSE),
+              width = 150,
+              multiple = FALSE
+            )
+          ),
+          highcharter::highchartOutput(ns("delay")),
+          footer = uiOutput(ns("delay_footer"))
         ),
         
         box_w_inputs(
@@ -454,6 +485,55 @@ mod_request_server <- function(id) {
     })
     
     # ==========================================================================
+    # DELAY CHART
+    # ==========================================================================
+    
+    output$delay <- renderHighchart({
+      range <- c(input$date_1, input$date_2)
+      # range <- c("request_1", "decision_1")
+      date_1 <- rlang::sym(range[1])
+      date_2 <- rlang::sym(range[2])
+      
+      df_delay <- app_data$df_delay %>% 
+        # filter to requests in pre-filtered df_data
+        semi_join(df_data(), by = "id_demand") %>% 
+        select(id_demand, event, date) %>% 
+        filter(event %in% range) %>% 
+        pivot_wider(names_from = "event", values_from = "date") %>% 
+        mutate(delay = as.numeric({{ date_2 }} - {{ date_1 }}))
+      
+      delay_mean <- mean(df_delay$delay, na.rm = TRUE)
+      delay_median <- median(df_delay$delay, na.rm = TRUE)
+      n_missing <- sum(is.na(df_delay$delay))
+      
+      df_hc <- df_delay %>% drop_na(delay) %>% count(delay)
+        
+      hchart(df_hc, "column", hcaes(delay, n), name = "Count") %>%
+        hc_chart(zoomType = "x") %>%
+        hc_title(text = NULL) %>%
+        hc_xAxis(
+          title = list(text = "Days"),
+          allowDecimals = FALSE,
+          crosshair = TRUE,
+          min = 0,
+          plotLines = list(
+            list(
+              color = "red", zIndex = 1, value = delay_mean,
+              label = list(text = "Mean", verticalAlign = "top", textAlign = "left")
+            ),
+            list(
+              color = "red", zIndex = 1, value = delay_median,
+              label = list(text = "Median", verticalAlign = "top", textAlign = "left")
+            )
+          )
+        ) %>%
+        hc_yAxis(title = list(text = ""), allowDecimals = FALSE) %>%
+        hc_tooltip(shared = TRUE) %>%
+        hc_credits(enabled = TRUE, text = glue::glue("Unknown delay time for {scales::number(n_missing)} cases")) %>%
+        my_hc_export()
+    })
+    
+    # ==========================================================================
     # TIMEVIS
     # ==========================================================================
     
@@ -476,21 +556,12 @@ mod_request_server <- function(id) {
       start_date <- min(dates) - lubridate::days(3)
       end_date <- max(dates) + lubridate::days(3)
       
-      # if (length(dates) == 1) {
-      #   start_date <- dates - 3
-      #   end_date <- dates + 3
-      # } else {
-      #   start_date <- min(dates) - 1
-      #   end_date <- max(dates) + 1
-      # }
-      
       timevis(
         df_out,
         options = list(
           start = start_date, 
           end = end_date,
           fit = FALSE
-          # timeAxis = list(scale = "day")
         )
       )
     })
