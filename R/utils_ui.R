@@ -74,6 +74,57 @@ value_panel <- function(title, n, width = 3) {
   )
 }
 
+
+tab_box_custom <- function(
+    ...,
+    id = NULL,
+    selected = NULL,
+    title = NULL,
+    inputs = NULL,
+    width = 6,
+    height = NULL,
+    side = c("left", "right")
+) {
+  side <- match.arg(side)
+  content <- shiny::tabsetPanel(..., id = id, selected = selected)
+  content$attribs$class <- "nav-tabs-custom"
+  if (!is.null(height)) {
+    content <- tagAppendAttributes(
+      content,
+      style = paste0("height: ", validateCssUnit(height))
+    )
+  }
+  if (side == "right") {
+    content$children[[1]] <- tagAppendAttributes(
+      content$children[[1]],
+      class = "pull-right"
+    )
+  }
+  if (!is.null(title)) {
+    if (side == "left") {
+      titleClass <- "pull-right"
+    } else {
+      titleClass <- "pull-left"
+    }
+    content$children[[1]] <- htmltools::tagAppendChild(
+      content$children[[1]],
+      tags$li(class = paste("box-header", titleClass), h3(class = "box-title", style = "display: inline-block; margin-right: 15px;", title))
+    )
+  }
+  if (!is.null(inputs)) {
+    if (side == "left") {
+      titleClass <- "pull-right"
+    } else {
+      titleClass <- "pull-left"
+    }
+    content$children[[1]] <- htmltools::tagAppendChild(
+      content$children[[1]],
+      tags$li(class = titleClass, purrr::map(inputs, div_inline))
+    )
+  }
+  div(class = paste0("col-sm-", width), content)
+}
+
 box_custom <- function(
   ..., 
   title = NULL, 

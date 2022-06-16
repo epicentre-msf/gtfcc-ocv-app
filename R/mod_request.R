@@ -85,34 +85,77 @@ mod_request_ui <- function(id) {
           footer = uiOutput(ns("cfr_footer"))
         ),
         
-        box_w_inputs(
-          width = 6,
-          title = tagList("Delay distribution"),
+        tab_box_custom(
+          id = ns("delay_tabs"), width = 6, side = "right",
+          title = "Delays",
           inputs = tagList(
-            helpText("from:"),
+            #helpText("from:"),
             shinyWidgets::pickerInput(
               ns("date_1"),
               label = NULL,
               choices = delay_choices,
               selected = delay_choices[1],
               options = picker_opts(actions = FALSE, search = FALSE),
-              width = 150,
+              width = 100,
               multiple = FALSE
             ),
-            helpText("to:"),
+            helpText("-"),
             shinyWidgets::pickerInput(
               ns("date_2"),
               label = NULL,
               choices = delay_choices,
               selected = delay_choices[2],
               options = picker_opts(actions = FALSE, search = FALSE),
-              width = 150,
+              width = 100,
               multiple = FALSE
+            ),
+            shinyWidgets::radioGroupButtons(
+              ns("delay_stacking"),
+              label = NULL,
+              choices = c("Stacked bars" = "normal", "Dodged bars" = "none"),
+              size = "sm"
             )
           ),
-          highcharter::highchartOutput(ns("delay")),
-          footer = uiOutput(ns("delay_footer"))
+          tabPanel(shiny::icon("bar-chart"), value = "chart", highcharter::highchartOutput(ns("delay"))),
+          tabPanel(shiny::icon("table"), value = "table", div(style = "min-height: 300px;", gt::gt_output(ns("delay_tbl"))))
         ),
+        
+        # box_w_inputs(
+        #   width = 6,
+        #   title = tagList("Delay distribution"),
+        #   inputs = tagList(
+        #     helpText("from:"),
+        #     shinyWidgets::pickerInput(
+        #       ns("date_1"),
+        #       label = NULL,
+        #       choices = delay_choices,
+        #       selected = delay_choices[1],
+        #       options = picker_opts(actions = FALSE, search = FALSE),
+        #       width = 100,
+        #       multiple = FALSE
+        #     ),
+        #     helpText("to:"),
+        #     shinyWidgets::pickerInput(
+        #       ns("date_2"),
+        #       label = NULL,
+        #       choices = delay_choices,
+        #       selected = delay_choices[2],
+        #       options = picker_opts(actions = FALSE, search = FALSE),
+        #       width = 100,
+        #       multiple = FALSE
+        #     )
+        #     # helpText("group by:"),
+        #     # shinyWidgets::radioGroupButtons(
+        #     #   ns("delay_group"),
+        #     #   label = NULL,
+        #     #   choices = c("Mechanism" = "request_mechanism", "Status" = "request_status"),
+        #     #   selected = "request_mechanism",
+        #     #   size = "sm"
+        #     # )
+        #   ),
+        #   highcharter::highchartOutput(ns("delay")),
+        #   footer = uiOutput(ns("delay_footer"))
+        # ),
         
         box_w_inputs(
           width = 12,
@@ -485,30 +528,45 @@ mod_request_server <- function(id) {
     })
     
     # ==========================================================================
-    # DELAY CHART
+    # DELAYS
     # ==========================================================================
     
-    output$delay <- renderHighchart({
+    observe({
+      cond <- (input$delay_tabs == "chart")
+      shinyjs::toggle("delay_stacking", condition = cond, anim = TRUE, animType = "fade")
+      shinyjs::toggle("delay_log", condition = cond, anim = TRUE, animType = "fade")
+    })
+    
+    df_delay <- reactive({
       range <- c(input$date_1, input$date_2)
-      # range <- c("request_1", "decision_1")
       date_1 <- rlang::sym(range[1])
       date_2 <- rlang::sym(range[2])
       
       df_delay <- app_data$df_delay %>% 
         # filter to requests in pre-filtered df_data
         semi_join(df_data(), by = "id_demand") %>% 
-        select(id_demand, event, date) %>% 
+        select(id_demand, request_mechanism, request_status, event, date) %>% 
         filter(event %in% range) %>% 
         pivot_wider(names_from = "event", values_from = "date") %>% 
         mutate(delay = as.numeric({{ date_2 }} - {{ date_1 }}))
+    })
+    
+    output$delay <- renderHighchart({
       
+      df_delay <- df_delay()
+      delay_group <- rlang::sym(input$group)
       delay_mean <- mean(df_delay$delay, na.rm = TRUE)
       delay_median <- median(df_delay$delay, na.rm = TRUE)
       n_missing <- sum(is.na(df_delay$delay))
       
-      df_hc <- df_delay %>% drop_na(delay) %>% count(delay)
+      df_hc <- df_delay %>% drop_na(delay) %>% count(!!delay_group, delay)
+      
+      stacking <- input$delay_stacking
+      if (input$delay_stacking == "none") {
+        stacking <- NULL
+      }
         
-      hchart(df_hc, "column", hcaes(delay, n), name = "Count") %>%
+      hchart(df_hc, "column", hcaes(delay, n, group = !!delay_group)) %>%
         hc_chart(zoomType = "x") %>%
         hc_title(text = NULL) %>%
         hc_xAxis(
@@ -528,9 +586,43 @@ mod_request_server <- function(id) {
           )
         ) %>%
         hc_yAxis(title = list(text = ""), allowDecimals = FALSE) %>%
+        hc_plotOptions(column = list(stacking = stacking)) %>% 
         hc_tooltip(shared = TRUE) %>%
+        hc_legend(
+          title = list(text = ""),
+          layout = "vertical",
+          align = "right",
+          verticalAlign = "top",
+          x = -10,
+          y = 40
+        ) %>% 
         hc_credits(enabled = TRUE, text = glue::glue("Unknown delay time for {scales::number(n_missing)} cases")) %>%
         my_hc_export()
+    })
+    
+    output$delay_tbl <- gt::render_gt({
+      df <- df_delay()
+      group <- input$group
+      group_lab <- dplyr::if_else(group == "request_mechanism", "Mechanism", "Status")
+      
+      df %>% 
+        dplyr::select(.data[[group]], delay) %>% 
+        gtsummary::tbl_summary(
+          by = input$group,
+          label = list(delay ~ "Days between events"),
+          type = gtsummary::all_continuous() ~ "continuous2",
+          digits = list(delay ~ c(0, 2, 2, 0, 0, 0, 0, 0)),
+          statistic = gtsummary::all_continuous() ~ c("{N_nonmiss}", 
+                                                      "{mean} ({sd})", 
+                                                      "{median} ({p25}, {p75})", 
+                                                      "{min}, {max}")
+        ) %>%
+        gtsummary::modify_header(update = gtsummary::all_stat_cols() ~ "**{level}**") %>%
+        gtsummary::add_overall(col_label = glue::glue("**{group_lab}**")) %>%
+        gtsummary::italicize_levels() %>%
+        gtsummary::modify_footnote(update = gtsummary::everything() ~ NA) %>%
+        gtsummary::as_gt()
+      
     })
     
     # ==========================================================================
