@@ -462,7 +462,6 @@ mod_request_server <- function(id) {
       ts_group <- rlang::sym(input$group)
       
       if (input$var == "Requests") {
-        
         df_counts <- df %>% 
           mutate(time_unit = as_date(floor_date(date_receipt, unit = input$ts_unit))) %>% 
           mutate(!!ts_group := forcats::fct_infreq(!!ts_group) %>% forcats::fct_explicit_na("Unknown")) %>%
@@ -483,14 +482,17 @@ mod_request_server <- function(id) {
     
     output$ts_chart <- renderHighchart({
       ts_group <- rlang::sym(input$group)
-      df_ts <- df_ts() %>% drop_na(time_unit)
+      df_ts <- df_ts() %>% drop_na(time_unit) 
       if (isolate(input$ts_unit) == "quarter") {
+        q_range <- range(df_ts$time_unit)
+        complete_quarters <- seq.Date(q_range[1], q_range[2], by = "3 months") 
         df_ts %<>% 
+          arrange(time_unit) %>% 
+          complete(time_unit = complete_quarters, !!ts_group, fill = list(n = 0)) %>% 
           mutate(
             time_lab = quarter(time_unit, with_year = TRUE) %>% str_replace("\\.", "-Q") %>% factor(),
             time_unit = as.numeric(time_lab)
-          ) %>% 
-          arrange(time_unit)
+          )
         hc <- hchart(df_ts, "column", hcaes(x = time_unit, y = n, group = !!ts_group, name = time_lab))
         x_type <- "category"
       } else {

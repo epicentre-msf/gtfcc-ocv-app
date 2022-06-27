@@ -16,6 +16,15 @@ filter_geo <- function(df, geo_select) {
   return(df)
 }
 
+quarter_to_date <- function(quarter) {
+  quarter %>% 
+    stringr::str_replace("Q1", "01-01") %>% 
+    stringr::str_replace("Q2", "04-01") %>% 
+    stringr::str_replace("Q3", "07-01") %>% 
+    stringr::str_replace("Q4", "10-01") %>% 
+    lubridate::as_date()
+}
+
 fmt_n_dose <- function(n) {
   if (is.na(n)) {
     "(Unknown)"
