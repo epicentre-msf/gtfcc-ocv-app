@@ -28,6 +28,7 @@ shiny::shinyOptions(cache = cachem::cache_disk(here::here(".cache")))
 options("lubridate.week.start" = 1)
 # aweek::set_week_start("Monday")
 
+date_updated <- readr::read_rds(here::here("data", "date_updated.rds")) %>% format("%d %B %Y")
 sf_world <- readr::read_rds(here::here("data", "sf_world.rds"))
 app_data <- readr::read_rds(here::here("data", "app_data.rds"))
 df_request <- app_data$request

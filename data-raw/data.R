@@ -6,6 +6,10 @@ source(here::here("R", "utils_data.R"))
 
 path_sharepoint <- "~/MSF/EpiDS - GTFCC-OCV/data-clean"
 path_data <- max(dir_ls(path_sharepoint, glob = "*.xlsx"))
+
+date_updated <- fs::file_info(path_data)$modification_time %>% lubridate::as_date()
+write_rds(date_updated, here::here("data", "date_updated.rds"))
+
 dat <- excel_sheets(path_data) %>% purrr::set_names() %>% map(~qxl::qread(path_data, .x))
 dat$request <- dat$request %>% 
   mutate(

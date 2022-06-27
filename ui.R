@@ -12,7 +12,7 @@ ui <- tagList(
   ),
   
   navbarPage(
-    title = app_title,
+    title = tagList(app_title, tags$small(glue::glue("last update: {date_updated}"))),
     windowTitle = app_title,
     position = "fixed-top",
     collapsible = TRUE,
