@@ -24,9 +24,8 @@ app_font <- "Alegreya Sans"
 # local disk cache
 shiny::shinyOptions(cache = cachem::cache_disk(here::here(".cache")))
 
-# Sys.setlocale("LC_TIME", "fr_FR.UTF-8")
+# week starts monday
 options("lubridate.week.start" = 1)
-# aweek::set_week_start("Monday")
 
 date_updated <- readr::read_rds(here::here("data", "date_updated.rds")) %>% format("%d %B %Y")
 sf_world <- readr::read_rds(here::here("data", "sf_world.rds"))

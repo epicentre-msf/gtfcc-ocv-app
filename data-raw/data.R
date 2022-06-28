@@ -75,10 +75,6 @@ if (!dir_exists(data_dir)) dir_create(data_dir)
 
 write_rds(app_data, path(data_dir, "app_data", ext = "rds"))
 
-# walk2(dat, names(dat), ~{
-#   write_rds(.x, path(data_dir, .y, ext = "rds"))
-# })
-
 if (FALSE) {
   library(summarytools)
   walk2(dat, names(dat), ~{
