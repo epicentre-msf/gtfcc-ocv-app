@@ -12,10 +12,12 @@ pal20 <- c(
   "#FABFD2FF", "#B07AA1FF", "#D4A6C8FF", "#9D7660FF", "#D7B5A6FF"
 )
 
-pal10 <- c(
-  "#4E79A7FF", "#F28E2BFF", "#E15759FF", "#76B7B2FF", "#59A14FFF",
-  "#EDC948FF", "#B07AA1FF", "#FF9DA7FF", "#9C755FFF", "#BAB0ACFF"
-)
+pal10 <- leaflet.minicharts::d3.schemeCategory10
+
+# pal10 <- c(
+#   "#4E79A7FF", "#F28E2BFF", "#E15759FF", "#76B7B2FF", "#59A14FFF",
+#   "#EDC948FF", "#B07AA1FF", "#FF9DA7FF", "#9C755FFF", "#BAB0ACFF"
+# )
 
 dark2 <- c(
   "steelblue", "#1B9E77", "#D95F02", "#7570B3", "#E7298A",
