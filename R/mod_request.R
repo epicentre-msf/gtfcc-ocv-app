@@ -206,6 +206,18 @@ mod_request_server <- function(id) {
     # DATA PREP
     # ==========================================================================
     
+    observe({
+      if (length(input$region)) {
+        countries <- df_request %>% filter(who_region %in% input$region) %>% distinct(request_country) %>% pull() %>% sort()
+        selected <- intersect(input$country, countries)
+        shinyWidgets::updatePickerInput(session, "country", choices = countries, selected = selected)
+      } else {
+        countries <- unique(df_request$request_country) %>% na.omit() %>% sort()
+        selected <- intersect(input$country, countries)
+        shinyWidgets::updatePickerInput(session, "country", choices = countries, selected = selected)
+      }
+    })
+    
     geo_select <- reactiveVal("World")
     observeEvent(input$geo, { geo_select(input$geo) })
     
@@ -213,13 +225,18 @@ mod_request_server <- function(id) {
       df <- df_request %>% 
         filter(quarter >= input$q_range[1], quarter <= input$q_range[2])
       
-      if (length(input$geo)) df %<>% filter_geo(input$geo)
+      # if (length(input$geo)) df %<>% filter_geo(input$geo)
+      if (length(input$region)) df %<>% filter(who_region %in% input$region)
+      if (length(input$country)) df %<>% filter(request_country %in% input$country)
       if (length(input$status)) df %<>% filter(request_status %in% input$status)
       if (length(input$context)) df %<>% filter(context %in% input$context)
       if (length(input$mechanism)) df %<>% filter(request_mechanism %in% input$mechanism)
       if (length(input$agency)) df %<>% filter(request_agency %in% input$agency)
       # if (!is.null(country_select())) df %<>% filter(iso_a3 == country_select())
-      # if (length(input$vaccin)) df %<>% filter(sc_ocv_recu %in% input$vaccin)
+      if (length(input$vaccine)) {
+        vacc_filter <- df_shipment %>% filter(vaccine %in% input$vaccine) %>% distinct(id_demand)
+        df %<>% semi_join(vacc_filter, by = "id_demand")
+      }
       
       return(df)
     }) %>% bindEvent(input$go1, input$go2, ignoreInit = FALSE, ignoreNULL = FALSE)

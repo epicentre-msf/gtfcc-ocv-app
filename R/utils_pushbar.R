@@ -15,15 +15,29 @@ pushbar_ui <- function(ns) {
       ),
       div(
         id = ns("resetable_filters"),
-        treeviewInput(
-          inputId = ns("geo"),
-          label = "Select a region/country:",
-          # choices = do.call(c, list(list(list(id = "world", text = "World")), make_tree(df_request, c("who_region", "request_country")))),
-          choices = make_tree(df_request, c("who_region", "request_country")),
-          selected = "world",
-          multiple = TRUE,
-          prevent_unselect = FALSE,
-          width = "100%"
+        # treeviewInput(
+        #   inputId = ns("geo"),
+        #   label = "Select a region/country:",
+        #   # choices = do.call(c, list(list(list(id = "world", text = "World")), make_tree(df_request, c("who_region", "request_country")))),
+        #   choices = make_tree(df_request, c("who_region", "request_country")),
+        #   selected = "world",
+        #   multiple = TRUE,
+        #   prevent_unselect = FALSE,
+        #   width = "100%"
+        # ),
+        shinyWidgets::pickerInput(
+          inputId = ns("region"),
+          label = "Region",
+          choices = unique(df_request$who_region) %>% na.omit(),
+          options = picker_opts(),
+          multiple = TRUE
+        ),
+        shinyWidgets::pickerInput(
+          inputId = ns("country"),
+          label = "Country",
+          choices = unique(df_request$request_country) %>% na.omit(),
+          options = picker_opts(search = TRUE),
+          multiple = TRUE
         ),
         shinyWidgets::pickerInput(
           inputId = ns("status"),
@@ -56,7 +70,7 @@ pushbar_ui <- function(ns) {
         shinyWidgets::pickerInput(
           inputId = ns("vaccine"),
           label = "Type of vaccine",
-          choices = c(""),
+          choices = unique(df_shipment$vaccine) %>% na.omit(),
           options = picker_opts(),
           multiple = TRUE
         ),
