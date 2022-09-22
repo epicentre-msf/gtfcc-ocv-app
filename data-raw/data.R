@@ -5,7 +5,7 @@ source(here::here("R", "utils_data.R"))
 
 
 path_sharepoint <- "~/MSF/EpiDS - GTFCC-OCV/data-clean"
-path_data <- max(dir_ls(path_sharepoint, glob = "*.xlsx"))
+path_data <- max(dir_ls(path_sharepoint, regexp = "data_request_clean_tables_.*.xlsx"))
 
 date_updated <- fs::file_info(path_data)$modification_time %>% lubridate::as_date()
 write_rds(date_updated, here::here("data", "date_updated.rds"))

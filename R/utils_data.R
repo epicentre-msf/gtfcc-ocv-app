@@ -66,7 +66,7 @@ get_timevis_df <- function(df_request, df_shipment, df_round) {
       content = glue::glue(
         "<b>Decision</b>", 
         "{fmt_n_dose(coalesce(n_dose_approve, n_dose_request))} doses {fmt_status(request_status)} via {request_mechanism}",
-        "Decision took {replace_na((date_decision - date_receipt), '(unknown)')} days",
+        "Decision took {replace_na(as.character(date_decision - date_receipt), '(unknown)')} days",
         .sep = "</br>"
       ),
       # start = coalesce(date_decision, date_receipt)
@@ -78,7 +78,7 @@ get_timevis_df <- function(df_request, df_shipment, df_round) {
       content = glue::glue(
         "<b>Delivery</b>", 
         "{fmt_n_dose(n_dose_ship)} doses of {vaccine}",
-        "Shipment took {replace_na((date_delivery - date_ship), '(unknown)')} days",
+        "Shipment took {replace_na(as.character(date_delivery - date_ship), '(unknown)')} days",
         .sep = "</br>"
       ), 
       event = "shipment"
