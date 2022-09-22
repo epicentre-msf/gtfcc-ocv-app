@@ -44,13 +44,13 @@ mod_request_ui <- function(id) {
           shinyWidgets::radioGroupButtons(
             ns("group"),
             label = NULL,
-            choices = c("Mechanism" = "request_mechanism", "Status" = "request_status"),
+            choices = group_vars,
             size = "sm"
           ),
           shinyWidgets::radioGroupButtons(
             ns("dose"),
             label = NULL,
-            choices = c("Requested" = "n_dose_request", "Approved" = "n_dose_approve", "Shipped" = "n_dose_ship"),
+            choices = dose_vars,
             size = "sm"
           )
         ) %>% purrr::map(div_inline)),
@@ -79,6 +79,15 @@ mod_request_ui <- function(id) {
               choices = c("Year" = "year", "Quarter" = "quarter", "Month" = "month", "Week" = "week"),
               selected = "year",
               size = "sm"
+            ),
+            shinyWidgets::pickerInput(
+              ns("ts_date"),
+              label = NULL,
+              choices = date_vars[1:2],
+              selected = date_vars[1],
+              options = picker_opts(actions = FALSE, search = FALSE),
+              width = 150,
+              multiple = FALSE
             )
           ),
           highcharter::highchartOutput(ns("ts_chart")),
@@ -404,6 +413,25 @@ mod_request_server <- function(id) {
       shinyjs::toggle("dose", condition = cond, anim = TRUE, animType = "fade")
     })
     
+    observe({
+      ts_date_selected <- input$ts_date
+      if (input$var == "Doses" & input$dose == "n_dose_ship") {
+        shinyWidgets::updatePickerInput(
+          session,
+          "ts_date",
+          choices = date_vars,
+          selected = ts_date_selected
+        )
+      } else {
+        shinyWidgets::updatePickerInput(
+          session,
+          "ts_date",
+          choices = date_vars[1:2],
+          selected = ts_date_selected
+        )
+      }
+    })
+    
     df_map <- reactive({
       map_var <- rlang::sym(input$var)
       map_group <- rlang::sym(input$group)
@@ -473,15 +501,30 @@ mod_request_server <- function(id) {
     # })
     
     df_ts <- reactive({
-      df <- df_data()
+      req(input$ts_date, cancelOutput = TRUE)
+      
+      if (input$var == "Doses" & input$ts_date == "date_delivery") {
+        df <- df_shipment %>% 
+          inner_join(
+            df_data() %>% distinct(id_demand, request_mechanism, request_status), 
+            by = "id_demand"
+          )
+      } else {
+        df <- df_data()
+      }
       # if (!is.null(country_select())) df %<>% filter(iso_a3 == country_select())
+      
+      req(input$ts_date %in% names(df), cancelOutput = TRUE)
+      
       ts_var <- rlang::sym(input$var)
       ts_group <- rlang::sym(input$group)
+      ts_date <- rlang::sym(input$ts_date)
       
       if (input$var == "Requests") {
         df_counts <- df %>% 
-          mutate(time_unit = as_date(floor_date(date_receipt, unit = input$ts_unit))) %>% 
-          mutate(!!ts_group := forcats::fct_infreq(!!ts_group) %>% forcats::fct_explicit_na("Unknown")) %>%
+          mutate(time_unit = as_date(floor_date(!!ts_date, unit = input$ts_unit))) %>% 
+          # mutate(!!ts_group := forcats::fct_infreq(!!ts_group) %>% forcats::fct_explicit_na("Unknown")) %>%
+          mutate(!!ts_group := factor(!!ts_group) %>% forcats::fct_explicit_na("Unknown")) %>%
           count(time_unit, !!ts_group) %>% 
           arrange(time_unit)
         
@@ -489,17 +532,21 @@ mod_request_server <- function(id) {
         ts_dose <- rlang::sym(input$dose)
         
         df_counts <- df %>% 
-          mutate(time_unit = as_date(floor_date(date_decision, unit = input$ts_unit))) %>% 
+          mutate(time_unit = as_date(floor_date(!!ts_date, unit = input$ts_unit))) %>% 
           count(time_unit, !!ts_group, wt = !!ts_dose) %>% 
-          mutate(!!ts_group := forcats::fct_reorder(!!ts_group, n, .desc = T) %>% forcats::fct_explicit_na("Unknown"))
+          mutate(!!ts_group := factor(!!ts_group) %>% forcats::fct_explicit_na("Unknown"))
+          # mutate(!!ts_group := forcats::fct_reorder(!!ts_group, n, .desc = T) %>% forcats::fct_explicit_na("Unknown"))
       }
       
       return(df_counts)
     })
     
     output$ts_chart <- renderHighchart({
+      req(df_ts())
+      
       ts_group <- rlang::sym(input$group)
       df_ts <- df_ts() %>% drop_na(time_unit) 
+      
       if (isolate(input$ts_unit) == "quarter") {
         q_range <- range(df_ts$time_unit)
         complete_quarters <- seq.Date(q_range[1], q_range[2], by = "3 months") 
@@ -517,10 +564,12 @@ mod_request_server <- function(id) {
         x_type <- "datetime"
       }
       
+      date_lab <- names(date_vars[date_vars == isolate(input$ts_date)])
+      
       hc %>% 
         hc_title(text = NULL) %>%
         hc_chart(zoomType = "x") %>%
-        hc_xAxis(type = x_type, title = list(text = ""), crosshair = TRUE) %>% 
+        hc_xAxis(type = x_type, title = list(text = date_lab), crosshair = TRUE) %>% 
         highcharter::hc_yAxis_multiples(
           list(
             title = list(text = ""),
