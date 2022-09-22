@@ -15,4 +15,4 @@ date_vars <- c(
   "Date of delivery" = "date_delivery"
 )
 
-grouping_levels <- c("ICG", "GTFCC", "Loan", "Approved", "Not approved", "Pending", "Cancelled")
+grouping_levels <- c("GTFCC", "ICG", "Loan", "Approved", "Not approved", "Pending", "Cancelled")

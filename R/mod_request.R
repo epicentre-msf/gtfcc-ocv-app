@@ -475,7 +475,7 @@ mod_request_server <- function(id) {
     observe({
       df_map <- df_map()
       chartData <- df_map %>% 
-        select(any_of(c("ICG", "GTFCC", "Loan", "Approved", "Not approved", "Pending", "Cancelled")))
+        select(any_of(grouping_levels))
       #select(-country, -iso_a3, -lon, -lat, -total)
       pie_width <- 60 * sqrt(df_map$total) / sqrt(max(df_map$total))
       
