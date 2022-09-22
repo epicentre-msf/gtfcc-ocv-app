@@ -524,7 +524,7 @@ mod_request_server <- function(id) {
         df_counts <- df %>% 
           mutate(time_unit = as_date(floor_date(!!ts_date, unit = input$ts_unit))) %>% 
           # mutate(!!ts_group := forcats::fct_infreq(!!ts_group) %>% forcats::fct_explicit_na("Unknown")) %>%
-          mutate(!!ts_group := factor(!!ts_group) %>% forcats::fct_explicit_na("Unknown")) %>%
+          mutate(!!ts_group := factor(!!ts_group, levels = grouping_levels) %>% forcats::fct_explicit_na("Unknown")) %>%
           count(time_unit, !!ts_group) %>% 
           arrange(time_unit)
         
@@ -534,7 +534,7 @@ mod_request_server <- function(id) {
         df_counts <- df %>% 
           mutate(time_unit = as_date(floor_date(!!ts_date, unit = input$ts_unit))) %>% 
           count(time_unit, !!ts_group, wt = !!ts_dose) %>% 
-          mutate(!!ts_group := factor(!!ts_group) %>% forcats::fct_explicit_na("Unknown"))
+          mutate(!!ts_group := factor(!!ts_group, levels = grouping_levels) %>% forcats::fct_explicit_na("Unknown"))
           # mutate(!!ts_group := forcats::fct_reorder(!!ts_group, n, .desc = T) %>% forcats::fct_explicit_na("Unknown"))
       }
       
