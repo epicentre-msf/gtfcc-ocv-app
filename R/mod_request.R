@@ -627,7 +627,10 @@ mod_request_server <- function(id) {
       delay_median <- median(df_delay$delay, na.rm = TRUE)
       n_missing <- sum(is.na(df_delay$delay))
       
-      df_hc <- df_delay %>% drop_na(delay) %>% count(!!delay_group, delay)
+      df_hc <- df_delay %>% 
+        drop_na(delay) %>% 
+        count(!!delay_group, delay) %>% 
+        mutate(!!delay_group := factor(!!delay_group, levels = grouping_levels) %>% forcats::fct_explicit_na("Unknown"))
       
       stacking <- input$delay_stacking
       if (input$delay_stacking == "none") {
