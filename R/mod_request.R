@@ -687,7 +687,7 @@ mod_request_server <- function(id) {
         gtsummary::tbl_summary(
           by = input$group,
           label = list(delay ~ "Days between events"),
-          type = gtsummary::all_continuous() ~ "continuous2",
+          type = list(delay ~ "continuous2"),
           digits = list(delay ~ c(0, 2, 2, 0, 0, 0, 0, 0)),
           statistic = gtsummary::all_continuous() ~ c("{N_nonmiss}", 
                                                       "{mean} ({sd})", 
