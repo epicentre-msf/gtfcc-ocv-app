@@ -35,14 +35,10 @@ df_round <- app_data$round
 df_shipment <- app_data$shipment
 df_timevis <- app_data$df_timevis
 
-q_range <- range(df_request$date_receipt, na.rm = TRUE) %>% 
-  floor_date("quarter") %>% 
-  as_date()
-q_range <- seq.Date(q_range[1], q_range[2], by = "3 months") %>% 
-  quarter(with_year = TRUE) %>% 
-  str_replace("\\.", "-Q")
+q_range <- get_q_range(df_request$date_receipt)
+# q_range_delivery <- get_q_range(df_shipment$date_delivery)
 
-disconnected <- sever::sever_default(
+ disconnected <- sever::sever_default(
   title = "Oops!",
   subtitle = "Sorry something went wrong or your session timed-out",
   button = "Reconnect",

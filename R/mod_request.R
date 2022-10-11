@@ -520,11 +520,17 @@ mod_request_server <- function(id) {
       ts_group <- rlang::sym(input$group)
       ts_date <- rlang::sym(input$ts_date)
       
+      g_levels <- if (input$group == "request_mechanism") {
+        grouping_levels[1:3]
+      } else if (input$group == "request_status") {
+        grouping_levels[4:7]
+      }
+
       if (input$var == "Requests") {
         df_counts <- df %>% 
           mutate(time_unit = as_date(floor_date(!!ts_date, unit = input$ts_unit))) %>% 
           # mutate(!!ts_group := forcats::fct_infreq(!!ts_group) %>% forcats::fct_explicit_na("Unknown")) %>%
-          mutate(!!ts_group := factor(!!ts_group, levels = grouping_levels) %>% forcats::fct_explicit_na("Unknown")) %>%
+          mutate(!!ts_group := factor(!!ts_group, levels = g_levels) %>% forcats::fct_explicit_na("Unknown")) %>%
           count(time_unit, !!ts_group) %>% 
           arrange(time_unit)
         
@@ -534,7 +540,7 @@ mod_request_server <- function(id) {
         df_counts <- df %>% 
           mutate(time_unit = as_date(floor_date(!!ts_date, unit = input$ts_unit))) %>% 
           count(time_unit, !!ts_group, wt = !!ts_dose) %>% 
-          mutate(!!ts_group := factor(!!ts_group, levels = grouping_levels) %>% forcats::fct_explicit_na("Unknown"))
+          mutate(!!ts_group := factor(!!ts_group, levels = g_levels) %>% forcats::fct_explicit_na("Unknown"))
           # mutate(!!ts_group := forcats::fct_reorder(!!ts_group, n, .desc = T) %>% forcats::fct_explicit_na("Unknown"))
       }
       

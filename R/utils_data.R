@@ -16,6 +16,16 @@ filter_geo <- function(df, geo_select) {
   return(df)
 }
 
+get_q_range <- function(x) {
+  q_range <- range(x, na.rm = TRUE) %>% 
+    floor_date("quarter") %>% 
+    as_date()
+  q_range <- seq.Date(q_range[1], q_range[2], by = "3 months") %>% 
+    quarter(with_year = TRUE) %>% 
+    str_replace("\\.", "-Q")
+  q_range
+}
+
 quarter_to_date <- function(quarter) {
   quarter %>% 
     stringr::str_replace("Q1", "01-01") %>% 
