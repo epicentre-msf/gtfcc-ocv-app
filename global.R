@@ -8,7 +8,6 @@ library(sever)
 library(cicerone)
 library(shinyWidgets)
 library(shinydashboard)
-library(shinytreeview)
 library(leaflet)
 library(leaflet.minicharts)
 library(highcharter)
@@ -31,15 +30,15 @@ date_updated <- readr::read_rds(here::here("data", "date_updated.rds")) %>% form
 sf_world <- readr::read_rds(here::here("data", "sf_world.rds"))
 app_data <- readr::read_rds(here::here("data", "app_data.rds"))
 df_request <- app_data$request
-df_round <- app_data$round
+df_round <- app_data$campaign_and_round
 df_shipment <- app_data$shipment
 df_timevis <- app_data$df_timevis
 
-q_range <- get_q_range(df_request$date_receipt)
+q_range <- get_q_range(df_request$r_date_receipt)
 # q_range_delivery <- get_q_range(df_shipment$date_delivery)
 
  disconnected <- sever::sever_default(
-  title = "Oops!",
+  title = "Disconnected",
   subtitle = "Sorry something went wrong or your session timed-out",
   button = "Reconnect",
   button_class = "info"

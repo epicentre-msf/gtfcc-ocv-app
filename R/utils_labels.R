@@ -5,14 +5,14 @@ delay_choices <- function(max_shipments, max_rounds) {
   c("Request" = "request_1", "Decision" = "decision_1", "Shipments" = list(shipments), "Rounds" = list(rounds))
 }
 
-group_vars <- c("Mechanism" = "request_mechanism", "Status" = "request_status")
+group_vars <- c("Mechanism" = "r_mechanism", "Status" = "r_status")
 
-dose_vars <- c("Requested" = "n_dose_request", "Approved" = "n_dose_approve", "Shipped" = "n_dose_ship")
+dose_vars <- c("Requested" = "r_dose_request", "Approved" = "r_dose_approve", "Shipped" = "s_dose_ship")
 
 date_vars <- c(
-  "Date of receipt" = "date_receipt",
-  "Date of decision" = "date_decision",
-  "Date of delivery" = "date_delivery"
+  "Date of receipt" = "r_date_receipt",
+  "Date of decision" = "r_date_decision",
+  "Date of delivery" = "s_date_delivery"
 )
 
 grouping_levels <- c("GTFCC", "ICG", "Loan", "Approved", "Not approved", "Pending", "Cancelled")

@@ -57,7 +57,7 @@ mod_request_ui <- function(id) {
         
         box_w_inputs(
           width = 12,
-          title = tagList(shiny::icon("globe-africa")),
+          title = tagList(shiny::icon("earth-africa")),
           input_right = capture::capture(
             selector = "#request-map-container",
             filename = glue::glue("GTFCC-Map-{Sys.Date()}.png"),
@@ -71,7 +71,7 @@ mod_request_ui <- function(id) {
         
         box_w_inputs(
           width = 6,
-          title = tagList(shiny::icon("bar-chart")),
+          title = tagList(shiny::icon("chart-column")),
           inputs = tagList(
             shinyWidgets::radioGroupButtons(
               ns("ts_unit"),
@@ -125,7 +125,7 @@ mod_request_ui <- function(id) {
               size = "sm"
             )
           ),
-          tabPanel(shiny::icon("bar-chart"), value = "chart", highcharter::highchartOutput(ns("delay"))),
+          tabPanel(shiny::icon("chart-column"), value = "chart", highcharter::highchartOutput(ns("delay"))),
           tabPanel(shiny::icon("table"), value = "table", div(style = "min-height: 300px;", gt::gt_output(ns("delay_tbl"))))
         ),
         
@@ -217,11 +217,11 @@ mod_request_server <- function(id) {
     
     observe({
       if (length(input$region)) {
-        countries <- df_request %>% filter(who_region %in% input$region) %>% distinct(request_country) %>% pull() %>% sort()
+        countries <- df_request %>% filter(r_who_region %in% input$region) %>% distinct(r_country) %>% pull() %>% sort()
         selected <- intersect(input$country, countries)
         shinyWidgets::updatePickerInput(session, "country", choices = countries, selected = selected)
       } else {
-        countries <- unique(df_request$request_country) %>% na.omit() %>% sort()
+        countries <- unique(df_request$r_country) %>% na.omit() %>% sort()
         selected <- intersect(input$country, countries)
         shinyWidgets::updatePickerInput(session, "country", choices = countries, selected = selected)
       }
@@ -235,16 +235,18 @@ mod_request_server <- function(id) {
         filter(quarter >= input$q_range[1], quarter <= input$q_range[2])
       
       # if (length(input$geo)) df %<>% filter_geo(input$geo)
-      if (length(input$region)) df %<>% filter(who_region %in% input$region)
-      if (length(input$country)) df %<>% filter(request_country %in% input$country)
-      if (length(input$status)) df %<>% filter(request_status %in% input$status)
-      if (length(input$context)) df %<>% filter(context %in% input$context)
-      if (length(input$mechanism)) df %<>% filter(request_mechanism %in% input$mechanism)
-      if (length(input$agency)) df %<>% filter(request_agency %in% input$agency)
+      if (length(input$region)) df %<>% filter(r_who_region %in% input$region)
+      if (length(input$country)) df %<>% filter(r_country %in% input$country)
+      if (length(input$status)) df %<>% filter(r_status %in% input$status)
+      if (length(input$context)) df %<>% filter(r_context %in% input$context)
+      if (length(input$mechanism)) df %<>% filter(r_mechanism %in% input$mechanism)
+      if (length(input$agency)) df %<>% filter(r_agency %in% input$agency)
       # if (!is.null(country_select())) df %<>% filter(iso_a3 == country_select())
       if (length(input$vaccine)) {
-        vacc_filter <- df_shipment %>% filter(vaccine %in% input$vaccine) %>% distinct(id_demand)
-        df %<>% semi_join(vacc_filter, by = "id_demand")
+        vacc_filter <- df_shipment %>% 
+          filter(s_vaccine %in% input$vaccine) %>% 
+          distinct(r_demand_id = s_r_demand_id)
+        df %<>% semi_join(vacc_filter, by = "r_demand_id")
       }
       
       return(df)
@@ -258,16 +260,16 @@ mod_request_server <- function(id) {
       df <- df_data()
       # if (!is.null(country_select())) df %<>% filter(iso_a3 == country_select())
       df %>% 
-        mutate(time_decision = date_decision - date_receipt) %>% 
+        mutate(time_decision = r_date_decision - r_date_receipt) %>% 
         summarise(
           n_requests = n(),
-          n_approved = sum(request_status == "Approved", na.rm = TRUE),
+          n_approved = sum(r_status == "Approved", na.rm = TRUE),
           pcnt_approved = n_approved / n_requests,
-          n_dose_requested = sum(n_dose_request, na.rm = TRUE),
-          n_dose_approved = sum(n_dose_approve, na.rm = TRUE),
+          n_dose_requested = sum(r_dose_request, na.rm = TRUE),
+          n_dose_approved = sum(r_dose_approve, na.rm = TRUE),
           pcnt_dose_approved = n_dose_approved / n_dose_requested,
-          n_regions = n_distinct(who_region, na.rm = TRUE),
-          n_countries = n_distinct(request_country, na.rm = TRUE),
+          n_regions = n_distinct(r_who_region, na.rm = TRUE),
+          n_countries = n_distinct(r_country, na.rm = TRUE),
           time_decision_av = round(mean(time_decision, na.rm = TRUE), 1),
           time_decision_min = min(time_decision, na.rm = TRUE),
           time_decision_max = max(time_decision, na.rm = TRUE)
@@ -311,7 +313,7 @@ mod_request_server <- function(id) {
         value = scales::number(df_summary()$n_countries),
         subtitle = glue::glue("{scales::number(df_summary()$n_regions)} WHO region(s)"),
         color = "teal",
-        icon = icon("globe-africa")
+        icon = icon("earth-africa")
         # info = "
       )
     })
@@ -415,7 +417,7 @@ mod_request_server <- function(id) {
     
     observe({
       ts_date_selected <- input$ts_date
-      if (input$var == "Doses" & input$dose == "n_dose_ship") {
+      if (input$var == "Doses" & input$dose == "s_dose_ship") {
         shinyWidgets::updatePickerInput(
           session,
           "ts_date",
@@ -503,11 +505,11 @@ mod_request_server <- function(id) {
     df_ts <- reactive({
       req(input$ts_date, cancelOutput = TRUE)
       
-      if (input$var == "Doses" & input$ts_date == "date_delivery") {
+      if (input$var == "Doses" & input$ts_date == "s_date_delivery") {
         df <- df_shipment %>% 
           inner_join(
-            df_data() %>% distinct(id_demand, request_mechanism, request_status), 
-            by = "id_demand"
+            df_data() %>% distinct(r_demand_id, r_mechanism, r_status), 
+            by = c("s_r_demand_id" = "r_demand_id")
           )
       } else {
         df <- df_data()
@@ -520,9 +522,9 @@ mod_request_server <- function(id) {
       ts_group <- rlang::sym(input$group)
       ts_date <- rlang::sym(input$ts_date)
       
-      g_levels <- if (input$group == "request_mechanism") {
+      g_levels <- if (input$group == "r_mechanism") {
         grouping_levels[1:3]
-      } else if (input$group == "request_status") {
+      } else if (input$group == "r_status") {
         grouping_levels[4:7]
       }
 
@@ -618,8 +620,8 @@ mod_request_server <- function(id) {
       
       df_delay <- app_data$df_delay %>% 
         # filter to requests in pre-filtered df_data
-        semi_join(df_data(), by = "id_demand") %>% 
-        select(id_demand, request_mechanism, request_status, event, date) %>% 
+        semi_join(df_data(), by = "r_demand_id") %>% 
+        select(r_demand_id, r_mechanism, r_status, event, date) %>% 
         filter(event %in% range) %>% 
         pivot_wider(names_from = "event", values_from = "date") %>% 
         mutate(delay = as.numeric({{ date_2 }} - {{ date_1 }}))
@@ -680,7 +682,7 @@ mod_request_server <- function(id) {
     output$delay_tbl <- gt::render_gt({
       df <- df_delay()
       group <- input$group
-      group_lab <- dplyr::if_else(group == "request_mechanism", "Mechanism", "Status")
+      group_lab <- dplyr::if_else(group == "r_mechanism", "Mechanism", "Status")
       
       df %>% 
         dplyr::select(.data[[group]], delay) %>% 
@@ -707,8 +709,8 @@ mod_request_server <- function(id) {
     # ==========================================================================
     
     observe({
-      df_demands <- df_data() %>% distinct(request_country, id_demand) %>% arrange(request_country, desc(id_demand))
-      demands <- split(df_demands$id_demand, df_demands$request_country)
+      df_demands <- df_data() %>% distinct(r_country, r_demand_id) %>% arrange(r_country, desc(r_demand_id))
+      demands <- split(df_demands$r_demand_id, df_demands$r_country)
       # browser()
       shinyWidgets::updatePickerInput(session, "demand", choices = demands)
     })
@@ -717,7 +719,7 @@ mod_request_server <- function(id) {
       req(input$demand)
       
       df_out <- df_timevis %>% 
-        filter(id_demand == input$demand) %>% 
+        filter(r_demand_id == input$demand) %>% 
         drop_na(start)
       
       dates <- unique(df_out$start)

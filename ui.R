@@ -24,7 +24,7 @@ ui <- tagList(
       mod_request_ui("request")
     ),
     tabPanel(
-      title = "Timeline", value = "timevis", icon = icon("bar-chart"),
+      title = "Timeline", value = "timevis", icon = icon("chart-column"),
       mod_timevis_ui("timevis")
     )
   ),

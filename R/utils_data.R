@@ -7,11 +7,11 @@ filter_geo <- function(df, geo_select) {
   rl <- length(region_select)
   cl <- length(country_select)
   if (rl & cl) {
-    df %<>% filter(who_region %in% region_select | request_country %in% country_select)
+    df %<>% filter(r_who_region %in% region_select | r_country %in% country_select)
   } else if (rl) {
-    df %<>% filter(who_region %in% region_select)
+    df %<>% filter(r_who_region %in% region_select)
   } else if (cl) {
-    df %<>% filter(request_country %in% country_select)
+    df %<>% filter(r_country %in% country_select)
   }
   return(df)
 }
@@ -58,51 +58,54 @@ get_timevis_df <- function(df_request, df_shipment, df_round) {
   request <- df_request %>% 
     transmute(
       event = "request",
-      id_demand,
+      r_demand_id,
       content = glue::glue(
         "<b>Request</b>", 
-        "{fmt_n_dose(n_dose_request)} doses requested", 
-        "by {request_agency} for {request_country}",
+        "{fmt_n_dose(r_dose_request)} doses requested", 
+        "by {r_agency} for {r_country}",
         .sep = "</br>"
       ),
-      start = date_receipt
+      start = r_date_receipt
     )
   
   decision <- df_request %>% 
-    mutate(n_dose_approve = na_if(n_dose_approve, 0)) %>% 
+    mutate(r_dose_approve = na_if(r_dose_approve, 0)) %>% 
     transmute(
       event = "decision",
-      id_demand,
+      r_demand_id,
       content = glue::glue(
         "<b>Decision</b>", 
-        "{fmt_n_dose(coalesce(n_dose_approve, n_dose_request))} doses {fmt_status(request_status)} via {request_mechanism}",
-        "Decision took {replace_na(as.character(date_decision - date_receipt), '(unknown)')} days",
+        "{fmt_n_dose(coalesce(r_dose_approve, r_dose_request))} doses {fmt_status(r_status)} via {r_mechanism}",
+        "Decision took {replace_na(as.character(r_date_decision - r_date_receipt), '(unknown)')} days",
         .sep = "</br>"
       ),
       # start = coalesce(date_decision, date_receipt)
-      start = date_decision
+      start = r_date_decision
     )
   
   shipment <- df_shipment %>% 
     mutate(
       content = glue::glue(
         "<b>Delivery</b>", 
-        "{fmt_n_dose(n_dose_ship)} doses of {vaccine}",
-        "Shipment took {replace_na(as.character(date_delivery - date_ship), '(unknown)')} days",
+        "{fmt_n_dose(s_dose_ship)} doses of {s_vaccine}",
+        "Shipment took {replace_na(as.character(s_date_delivery - s_date_ship), '(unknown)')} days",
         .sep = "</br>"
       ), 
       event = "shipment"
     ) %>% 
-    select(event, id_demand, content, start = date_delivery)  
+    select(event, r_demand_id = s_r_demand_id, content, start = s_date_delivery)  
+  
+  id_lookup <- distinct(df_shipment, r_demand_id = s_r_demand_id, c_s_id = s_id)
   
   round <- df_round %>% 
-    filter(!is.na(round_number)) %>% 
+    filter(!is.na(cr_number)) %>% 
     mutate(
       event = "round",
-      cr = str_sub(id_round, start = -5) %>% replace_na("(Unknown)"),
-      content = glue::glue("<b>Round {cr}</b></br>{fmt_n_dose(n_dose_admin)} doses")
+      cr = str_sub(cr_id, start = -7) %>% replace_na("(Unknown)"),
+      content = glue::glue("<b>Round {cr}</b></br>{fmt_n_dose(cr_dose_adm)} doses")
     ) %>% 
-    select(event, id_demand, content, start = date_round)
+    left_join(id_lookup,by = "c_s_id") %>% 
+    select(event, r_demand_id, content, start = cr_date_round_start)
   
   bind_rows(request, decision, shipment, round)
 }
@@ -110,9 +113,9 @@ get_timevis_df <- function(df_request, df_shipment, df_round) {
 
 get_delay_df <- function(df_timeline) {
   df_timeline %>% 
-    arrange(id_demand, start) %>% 
-    group_by(id_demand, event) %>% 
+    arrange(r_demand_id, start) %>% 
+    group_by(r_demand_id, event) %>% 
     mutate(event = paste(event, row_number(), sep = "_")) %>% 
     ungroup() %>% 
-    select(id_demand, event, date = start) 
+    select(r_demand_id, event, date = start) 
 }
