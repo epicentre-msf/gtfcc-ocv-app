@@ -94,4 +94,3 @@ if (FALSE) {
     view(df_sum, method = "browser", file = path("data-raw", .y, ext = "html"))
   })
 }
-

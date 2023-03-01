@@ -1,0 +1,252 @@
+---
+title: "GTFCC OCV"
+format:
+  html:
+    embed-resources: true
+execute: 
+   warning: false
+   echo: false
+---
+
+
+```{r}
+library(tidyverse)
+
+sf_world <- readr::read_rds(here::here("data", "sf_world.rds"))
+app_data <- readr::read_rds(here::here("data", "app_data.rds"))
+df_request <- app_data$request
+df_shipment <- app_data$shipment
+
+df_demands <- df_request %>% distinct(r_demand_id, iso_a3, r_country)
+
+df_counts <- df_shipment %>%
+  # filter(s_year_delivery == 2022) %>%
+  group_by(s_r_demand_id, s_year_delivery) %>%
+  summarise(s_dose_ship = sum(s_dose_ship, na.rm = TRUE), .groups = "drop") %>%
+  left_join(df_demands, by = c("s_r_demand_id" = "r_demand_id")) %>%
+  count(year = s_year_delivery, iso_a3, wt = s_dose_ship)
+
+df_map <- sf_world %>%
+  sf::st_drop_geometry() %>%
+  select(country, iso_a3, lon, lat) %>%
+  inner_join(df_counts, by = "iso_a3") %>%
+  mutate(across(where(is.numeric), as.double)) %>%
+  mutate(across(where(is.double), ~ if_else(is.na(.x), 0, .x))) %>% 
+  filter(year != 0) %>% 
+  arrange(year, country)
+
+ojs_define(df_map = jsonlite::toJSON(df_map))
+```
+
+```{ojs}
+viewof year = Scrubber(
+  [...new Set(data_raw.map(d => d.year))],
+  {
+    label: "Year",
+    autoplay: false,
+    delay: 250
+  }
+)
+```
+
+```{ojs}
+projs = [
+    {name: "Winkel tripel", value: d3.geoWinkel3}, 
+    {name: "Robinson", value: d3.geoRobinson}, 
+    {name: "Equal Earth", value: d3.geoEqualEarth}
+  ]
+```
+
+```{ojs}
+viewof proj = Inputs.select(
+  projections, 
+  {
+    label: "Map Projection", 
+    format: x => x.name, 
+    value: projs.find(t => t.name === "Winkel tripel")
+  }
+)
+```
+
+```{ojs}
+viewof k = Inputs.range([10, 80], { label: "radius", step: 1, value: 35 })
+```
+
+```{ojs}
+viewof labs = Inputs.toggle({ label: "Show labels?", value: true })
+```
+
+```{ojs}
+bertin.draw({
+  params: {
+    projection: proj.value()
+  },
+  layers: [
+    {
+      type: "label",
+      display: labs ? true : false,
+      geojson: dfMap,
+      values: "country",
+      fontWeight: "bold",
+      fontSize: 12,
+      halo: true
+    },
+    {
+      type: "bubble",
+      geojson: dfMap,
+      values: "n",
+      k: k,
+      dorling: false,
+      fill: "#4682b4",
+      stroke: "#fff",
+      tooltip: ["$country", (d) => d.properties.n + " doses"],  
+      leg_x: 720,
+      leg_y: 420,
+      leg_divisor: 1000000,
+      leg_round: 2,
+      leg_title: "Doses Delivered\n(millions)"
+    },
+    {
+      type: "layer",
+      geojson: world,
+      fill: "white",
+      fillOpacity: 0.3,
+      stroke: "none"
+    },
+    { type: "outline" },
+    { type: "graticule" }
+  ]
+})
+```
+
+```{ojs}
+dfMap = bertin.table2geo(data_filtered, "lat", "lon")
+```
+
+```{ojs}
+data_filtered = data_raw.filter((d) => d.year == year)
+```
+
+```{ojs}
+data_raw = JSON.parse(df_map)
+```
+
+```{ojs}
+world = d3.json(
+  "https://raw.githubusercontent.com/neocarto/bertin/main/data/world.geojson"
+)
+```
+
+```{ojs}
+import {Scrubber} from "@mbostock/scrubber"
+bertin = require("bertin@latest")
+d3 = require("d3@7", "d3-geo-projection@4")
+```
+
+
+```{ojs}
+projections = [
+  {name: "Airy’s minimum error", value: d3.geoAiry},
+  {name: "Azimuthal equidistant", value: d3.geoAzimuthalEquidistant},
+  {name: "General perspective", value: d3.geoSatellite},
+  {name: "Gnomonic", value: d3.geoGnomonic},
+  {name: "Lambert Azimuthal equal-area", value: d3.geoAzimuthalEqualArea}, 
+  {name: "Orthographic", value: d3.geoOrthographic},
+  {name: "Stereographic", value: d3.geoStereographic},
+  
+  {name: "Conic equal-area", value: d3.geoConicEqualArea},
+  {name: "Conic equidistant", value: d3.geoConicEquidistant},
+  //{name: "conic conformal", value: d3.geoConicConformal}, // Not suitable for world maps.
+  
+  {name: "Equirectangular (plate carrée)", value: d3.geoEquirectangular},
+  {name: "Cylindrical equal-area", value: d3.geoCylindricalEqualArea},
+  {name: "Cylindrical stereographic", value: d3.geoCylindricalStereographic},
+  {name: "Collignon", value: d3.geoCollignon},
+  {name: "Mercator", value: d3.geoMercator},
+  {name: "Transverse Mercator", value: d3.geoTransverseMercator},
+  {name: "Miller cylindrical", value: d3.geoMiller},
+  {name: "Patterson cylindrical", value: d3.geoPatterson},
+  
+  {category: "Interrupted / Polyhedral Projections"},
+  {name: "Berghaus’ star", value: d3.geoBerghaus},
+  {name: "Boggs’ eumorphic (interrupted)", value: d3.geoInterruptedBoggs},
+  {name: "Butterfly (gnomonic)", value: d3.geoPolyhedralButterfly},
+  {name: "Butterfly (Collignon)", value: d3.geoPolyhedralCollignon},
+  {name: "Butterfly (Waterman)", value: d3.geoPolyhedralWaterman},
+  {name: "Gingery", value: d3.geoGingery},
+  {name: "Goode’s homolosine (interrupted)", value: d3.geoInterruptedHomolosine},
+  {name: "HEALPix", value: d3.geoHealpix},
+  {name: "Mollweide (Goode’s interrupted)", value: d3.geoInterruptedMollweide},
+  {name: "Mollweide (interrupted hemispheres)", value: d3.geoInterruptedMollweideHemispheres},
+  {name: "sinusoidal (interrupted)", value: d3.geoInterruptedSinusoidal},
+  {name: "sinu-Mollweide (interrupted)", value: d3.geoInterruptedSinuMollweide},
+  
+  {name: "Aitoff", value: d3.geoAitoff},
+  {name: "American polyconic", value: d3.geoPolyconic},
+  {name: "Armadillo", value: d3.geoArmadillo},
+  {name: "August", value: d3.geoAugust},
+  {name: "Baker dinomic", value: d3.geoBaker},
+  {name: "Bertin’s 1953", value: d3.geoBertin1953},
+  {name: "Boggs’ eumorphic", value: d3.geoBoggs},
+  {name: "Bonne", value: d3.geoBonne},
+  {name: "Bottomley", value: d3.geoBottomley},
+  {name: "Bromley", value: d3.geoBromley},
+  {name: "Craig retroazimuthal", value: d3.geoCraig},
+  {name: "Craster parabolic", value: d3.geoCraster},
+  {name: "Eckert I", value: d3.geoEckert1},
+  {name: "Eckert II", value: d3.geoEckert2},
+  {name: "Eckert III", value: d3.geoEckert3},
+  {name: "Eckert IV", value: d3.geoEckert4},
+  {name: "Eckert V", value: d3.geoEckert5},
+  {name: "Eckert VI", value: d3.geoEckert6},
+  {name: "Eisenlohr conformal", value: d3.geoEisenlohr},
+  {name: "Equal Earth", value: d3.geoEqualEarth},
+  {name: "Fahey pseudocylindrical", value: d3.geoFahey},
+  {name: "Foucaut’s stereographic equivalent", value: d3.geoFoucaut},
+  {name: "Foucaut’s sinusoidal", value: d3.geoFoucautSinusoidal},
+  {name: "Gilbert’s two-world", value: d3.geoGilbert},
+  {name: "Ginzburg V", value: d3.geoGinzburg5},
+  {name: "Ginzburg VI", value: d3.geoGinzburg6},
+  {name: "Ginzburg VIII", value: d3.geoGinzburg8},
+  {name: "Ginzburg IX", value: d3.geoGinzburg9},  
+  {name: "Gringorten quincuncial", value: d3.geoGringortenQuincuncial},
+  {name: "Gringorten square", value: d3.geoGringorten},
+  {name: "Guyou square", value: d3.geoGuyou},
+  {name: "Goode’s homolosine", value: d3.geoHomolosine},
+  {name: "Hammer", value: d3.geoHammer},
+  {name: "Hammer retroazimuthal", value: d3.geoHammerRetroazimuthal},
+  {name: "Hill eucyclic", value: d3.geoHill},
+  {name: "Hufnagel pseudocylindrical", value: d3.geoHufnagel},
+  {name: "Kavrayskiy VII", value: d3.geoKavrayskiy7},
+  {name: "Lagrange conformal", value: d3.geoLagrange},
+  {name: "Larrivée", value: d3.geoLarrivee},
+  {name: "Laskowski tri-optimal", value: d3.geoLaskowski},
+  // {name: "Littrow retroazimuthal", value: d3.geoLittrow}, // Not suitable for world maps.
+  {name: "Loximuthal", value: d3.geoLoximuthal},
+  {name: "Mollweide", value: d3.geoMollweide},
+  {name: "McBryde–Thomas flat-polar parabolic", value: d3.geoMtFlatPolarParabolic},
+  {name: "McBryde–Thomas flat-polar quartic", value: d3.geoMtFlatPolarQuartic},
+  {name: "McBryde–Thomas flat-polar sinusoidal", value: d3.geoMtFlatPolarSinusoidal},
+  {name: "Natural Earth", value: d3.geoNaturalEarth1},
+  {name: "Natural Earth II", value: d3.geoNaturalEarth2},
+  {name: "Nell–Hammer", value: d3.geoNellHammer},
+  {name: "Nicolosi globular", value: d3.geoNicolosi},
+  {name: "Peirce quincuncial", value: d3.geoPeirceQuincuncial},
+  {name: "rectangular polyconic", value: d3.geoRectangularPolyconic},
+  {name: "Robinson", value: d3.geoRobinson},
+  {name: "sinusoidal", value: d3.geoSinusoidal},
+  {name: "sinu-Mollweide", value: d3.geoSinuMollweide},
+  {name: "Times", value: d3.geoTimes},
+  {name: "Tobler hyperelliptical", value: d3.geoHyperelliptical},
+  {name: "Van der Grinten", value: d3.geoVanDerGrinten},
+  {name: "Van der Grinten II", value: d3.geoVanDerGrinten2},
+  {name: "Van der Grinten III", value: d3.geoVanDerGrinten3},
+  {name: "Van der Grinten IV", value: d3.geoVanDerGrinten4},
+  {name: "Wagner IV", value: d3.geoWagner4},
+  {name: "Wagner VI", value: d3.geoWagner6},
+  {name: "Wagner VII", value: d3.geoWagner7},
+  {name: "Werner", value: () => d3.geoBonne().parallel(90)},
+  {name: "Wiechel", value: d3.geoWiechel},
+  {name: "Winkel tripel", value: d3.geoWinkel3}
+]
+```

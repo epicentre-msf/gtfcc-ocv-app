@@ -7,6 +7,7 @@ app_server <- function(input, output, session) {
   track_usage(
     storage_mode = store_json(path = here::here("logs")),
     app_name = app_name,
+    what = c("session"),
     exclude_users = c("paul.campbell@epicentre.msf.org", "paul")
   )
   

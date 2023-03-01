@@ -8,3 +8,4 @@ data
 logs
 .cache
 *.html
+dev/map_files
