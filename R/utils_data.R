@@ -84,11 +84,15 @@ get_timevis_df <- function(df_request, df_shipment, df_round) {
     )
   
   shipment <- df_shipment %>% 
+    left_join(
+      select(df_request, r_demand_id, r_date_decision),
+      by = c("s_r_demand_id" = "r_demand_id")
+    ) %>% 
     mutate(
       content = glue::glue(
         "<b>Delivery</b>", 
         "{fmt_n_dose(s_dose_ship)} doses of {s_vaccine}",
-        "Shipment took {replace_na(as.character(s_date_delivery - s_date_ship), '(unknown)')} days",
+        "{replace_na(as.character(s_date_delivery - r_date_decision), '(unknown)')} days since request accepted",
         .sep = "</br>"
       ), 
       event = "shipment"

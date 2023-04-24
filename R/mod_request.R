@@ -416,7 +416,7 @@ mod_request_server <- function(id) {
     })
     
     observe({
-      ts_date_selected <- input$ts_date
+      ts_date_selected <- isolate(input$ts_date)
       if (input$var == "Doses" & input$dose == "s_dose_ship") {
         shinyWidgets::updatePickerInput(
           session,
