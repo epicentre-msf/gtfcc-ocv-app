@@ -26,10 +26,11 @@ mod_request_ui <- function(id) {
       # verbatimTextOutput(outputId = ns("geo_select")),
       
       fluidRow(
-        shinydashboard::valueBoxOutput(ns("n_requests"), width = 3),
-        shinydashboard::valueBoxOutput(ns("n_doses"), width = 3),
+        shinydashboard::valueBoxOutput(ns("n_requests"), width = 2),
+        shinydashboard::valueBoxOutput(ns("n_doses"), width = 2),
+        shinydashboard::valueBoxOutput(ns("n_doses_shipped"), width = 3),
         shinydashboard::valueBoxOutput(ns("n_countries"), width = 3),
-        shinydashboard::valueBoxOutput(ns("time_decision"), width = 3)
+        shinydashboard::valueBoxOutput(ns("time_decision"), width = 2)
       ),
       
       fluidRow(
@@ -268,8 +269,13 @@ mod_request_server <- function(id) {
           n_dose_requested = sum(r_dose_request, na.rm = TRUE),
           n_dose_approved = sum(r_dose_approve, na.rm = TRUE),
           pcnt_dose_approved = n_dose_approved / n_dose_requested,
+          n_dose_shipped = sum(s_dose_ship, na.rm = TRUE),
+          n_dose_shipped_icg = sum(s_dose_ship[r_mechanism == "ICG"], na.rm = TRUE),
+          pcnt_dose_shipped_icg = n_dose_shipped_icg / n_dose_shipped,
           n_regions = n_distinct(r_who_region, na.rm = TRUE),
           n_countries = n_distinct(r_country, na.rm = TRUE),
+          n_countries_approved = n_distinct(r_country[r_status == "Approved"], na.rm = TRUE),
+          pcnt_countries_approved = n_countries_approved / n_countries,
           time_decision_av = round(mean(time_decision, na.rm = TRUE), 1),
           time_decision_min = min(time_decision, na.rm = TRUE),
           time_decision_max = max(time_decision, na.rm = TRUE)
@@ -306,12 +312,30 @@ mod_request_server <- function(id) {
       )
     })
     
+    output$n_doses_shipped <- renderValueBox({
+      s <- fmt_n_dose(df_summary()$n_dose_shipped)
+      s_icg <- fmt_n_dose(df_summary()$n_dose_shipped_icg)
+      s_icg_p <- scales::percent(df_summary()$pcnt_dose_shipped_icg)
+      valueBoxSpark(
+        width = 12,
+        title = "Doses shipped",
+        value = s,
+        subtitle = glue::glue("{s_icg} ({s_icg_p}) shipped with ICG"),
+        color = "aqua",
+        icon = icon("plane")
+        # info = ""
+      )
+    })
+    
     output$n_countries <- renderValueBox({
+      n <- scales::number(df_summary()$n_countries)
+      na <- scales::number(df_summary()$n_countries_approved)
+      pcnt <- scales::percent(df_summary()$pcnt_countries_approved)
       valueBoxSpark(
         width = 12,
         title = "Countries",
-        value = scales::number(df_summary()$n_countries),
-        subtitle = glue::glue("{scales::number(df_summary()$n_regions)} WHO region(s)"),
+        value = n,
+        subtitle = glue::glue("{na} ({pcnt}) with an approved request"),
         color = "teal",
         icon = icon("earth-africa")
         # info = "
