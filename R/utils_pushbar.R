@@ -6,7 +6,7 @@ pushbar_ui <- function(ns) {
       class = "sidebar-inputs",
       shinyWidgets::sliderTextInput(
         inputId = ns("q_range"),
-        label = "Quarter",
+        label = "Quarter of request",
         choices = q_range,
         selected = c(min(q_range), max(q_range)),
         grid = FALSE,

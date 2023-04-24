@@ -422,7 +422,7 @@ mod_request_server <- function(id) {
           session,
           "ts_date",
           choices = date_vars,
-          selected = ts_date_selected
+          selected = "s_date_delivery"
         )
       } else {
         shinyWidgets::updatePickerInput(

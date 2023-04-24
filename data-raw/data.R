@@ -51,7 +51,7 @@ df_info <- dat$request %>%
 df_timeline <- get_timevis_df(dat$request, dat$shipment, dat$campaign_and_round)
 
 df_timevis <- df_info %>% 
-  left_join(df_timeline, by = "r_demand_id") %>% 
+  left_join(df_timeline, by = "r_demand_id", multiple = "all") %>% 
   drop_na(start) %>% 
   mutate(
     type = "point", 
@@ -60,7 +60,7 @@ df_timevis <- df_info %>%
   rename(group = r_country)
 
 df_delay <- df_info %>% 
-  left_join(get_delay_df(df_timeline), by = "r_demand_id") %>% 
+  left_join(get_delay_df(df_timeline), by = "r_demand_id", multiple = "all") %>% 
   drop_na(date)
 
 df_event_max <- df_delay %>% 

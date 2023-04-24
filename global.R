@@ -34,7 +34,11 @@ df_round <- app_data$campaign_and_round
 df_shipment <- app_data$shipment
 df_timevis <- app_data$df_timevis
 
-q_range <- get_q_range(df_request$r_date_receipt)
+q_range <- get_q_range(c(
+  df_request$r_date_receipt,
+  df_shipment$s_date_delivery,
+  df_round$cr_date_round_start
+))
 # q_range_delivery <- get_q_range(df_shipment$date_delivery)
 
  disconnected <- sever::sever_default(

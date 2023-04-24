@@ -10,7 +10,7 @@ group_vars <- c("Mechanism" = "r_mechanism", "Status" = "r_status")
 dose_vars <- c("Requested" = "r_dose_request", "Approved" = "r_dose_approve", "Shipped" = "s_dose_ship")
 
 date_vars <- c(
-  "Date of receipt" = "r_date_receipt",
+  "Date of request" = "r_date_receipt",
   "Date of decision" = "r_date_decision",
   "Date of delivery" = "s_date_delivery"
 )
