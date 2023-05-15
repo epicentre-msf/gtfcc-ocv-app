@@ -23,13 +23,16 @@ health_icon <- function(icon, type = "filled", format = "svg", height = 25) {
   )
 }
 
-picker_opts <- function(actions = TRUE, search = FALSE, none_text = "All", selected_text = "selected") {
+picker_opts <- function(actions = TRUE, search = FALSE, none_text = "All", selected_text = "selected", ...) {
   shinyWidgets::pickerOptions(
     actionsBox = actions,
     liveSearch = search,
     selectedTextFormat = "count > 2",
     countSelectedText = paste("{0}", selected_text),
-    noneSelectedText = none_text
+    noneSelectedText = none_text,
+    dropupAuto = FALSE,
+    style = "btn-light",
+    ...
   )
 }
 
