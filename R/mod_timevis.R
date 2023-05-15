@@ -1,21 +1,22 @@
 
 mod_timevis_ui <- function(id) {
   ns <- NS(id)
-  div(
-    class = "reactive-width",
-    tagList(
+  bslib::layout_sidebar(
+    fillable = FALSE,
+    sidebar = sidebar(
       shinyWidgets::radioGroupButtons(
         ns("period"),
         label = NULL,
         choices = c("Current year" = "ytd", "Past 6 months" = "6m", "Past 12 months" = "12m", "All period" = "all"),
         selected = "ytd",
-        size = "sm"
+        width = "100%",
+        direction = "vertical"
       ),
       shinyWidgets::pickerInput(
         inputId = ns("country"),
         label = NULL,
         choices = "",
-        options = picker_opts(search = TRUE, none_text = "All countries"),
+        options = picker_opts(search = TRUE, none_text = "All countries", style = "btn-outline-success"),
         multiple = TRUE,
         width = 200
       ),
@@ -24,12 +25,21 @@ mod_timevis_ui <- function(id) {
         label = NULL,
         choices = c("Requests" = "request", "Decisions" = "decision", "Shipments" = "shipment", "Rounds" = "round"),
         selected = NULL, # c("request", "decision", "shipment", "round"),
-        options = picker_opts(none_text = "All events"),
+        options = picker_opts(none_text = "All events", style = "btn-outline-success"),
         multiple = TRUE,
         width = 200
       )
-    ) %>% map(div_inline),
-    timevis::timevisOutput(ns("timevis"))
+    ),
+    card(
+      full_screen = FALSE,
+      class = "m-3",
+      card_header(
+        card_title(bsicons::bs_icon("calendar-week"))
+      ),
+      card_body(
+        timevis::timevisOutput(ns("timevis"))
+      )
+    )
   )
 }
 

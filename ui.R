@@ -1,27 +1,25 @@
 ui <- tagList(
   tags$head(
-    # tags$style(
-    #   HTML("body {margin-top: 60px;}")
-    # ),
-    # tags$link(href = google_font(app_font), rel = "stylesheet"),
+    tags$link(href = google_font(p_font), rel = "stylesheet"),
+    tags$style(
+      HTML(glue::glue("p {{font-family: '{p_font}';}}"))
+    ),
     # tags$link(rel = "stylesheet", type = "text/css", href = "styles.css"),
     # tags$script(src = "addNavLink.js"),
     # shinyWidgets::useShinydashboard(),
     # pushbar::pushbar_deps(),
+    # cicerone::use_cicerone()
     shinyjs::useShinyjs(),
     waiter::use_waiter(),
     sever::useSever()
-    # cicerone::use_cicerone()
   ),
   
   page_navbar(
     title = tagList(app_title, tags$small(glue::glue("last update: {date_updated}"))),
     id = "tabs",
     window_title = app_title,
-    # position = "fixed-top",
     fillable = TRUE,
     collapsible = TRUE,
-    # bg = "#f8f9fa",
     inverse = FALSE,
     theme = bs_theme(
       base_font = font_google(
@@ -30,10 +28,11 @@ ui <- tagList(
         ital = c(0, 1)
       ),
       bootswatch = "litera",
+      success = SUCCESS,
+      warning = WARNING
       # "navbar-bg" = "#f8f9fa",
       # "navbar-light-bg" = "#f8f9fa",
       # "navbar-dark-bg" = "#f8f9fa",
-      # primary = "#2E569E",
       # secondary = "#D37331",
       # success = "#94BA3B"
     ),
@@ -43,10 +42,10 @@ ui <- tagList(
       title = "Requests", value = "request", icon = icon("list"),
       mod_request_ui("request")
     ),
-    # nav(
-    #   title = "Timeline", value = "timevis", icon = icon("chart-column"),
-    #   mod_timevis_ui("timevis")
-    # ),
+    nav(
+      title = "Timeline", value = "timevis", icon = icon("chart-column"),
+      mod_timevis_ui("timevis")
+    ),
     nav_spacer(),
     nav_item(
       tags$a(

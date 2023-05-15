@@ -13,6 +13,13 @@ div_inline <- function(..., margin_right = TRUE) {
   tags$div(style = paste(display, margin), ...)
 }
 
+col_auto <- function(...) {
+  shiny::div(
+    class = "col-auto",
+    ...
+  )
+}
+
 health_icon <- function(icon, type = "filled", format = "svg", height = 25) {
   type <- match.arg(type, c("filled", "outline", "negative"), several.ok = FALSE)
   format <- match.arg(format, c("svg", "png"), several.ok = FALSE)
@@ -23,7 +30,7 @@ health_icon <- function(icon, type = "filled", format = "svg", height = 25) {
   )
 }
 
-picker_opts <- function(actions = TRUE, search = FALSE, none_text = "All", selected_text = "selected", ...) {
+picker_opts <- function(actions = TRUE, search = FALSE, none_text = "All", selected_text = "selected", style = "btn-sm btn-outline-success", ...) {
   shinyWidgets::pickerOptions(
     actionsBox = actions,
     liveSearch = search,
@@ -31,7 +38,7 @@ picker_opts <- function(actions = TRUE, search = FALSE, none_text = "All", selec
     countSelectedText = paste("{0}", selected_text),
     noneSelectedText = none_text,
     dropupAuto = FALSE,
-    style = "btn-light",
+    style = style,
     ...
   )
 }

@@ -6,73 +6,69 @@ mod_request_ui <- function(id) {
   bslib::layout_sidebar(
     fillable = FALSE,
     sidebar = sidebar(
-      # title = "Filters",
       div(
-        class = "sidebar-inputs",
-        div(
-          id = ns("resetable_filters"),
-          shinyWidgets::sliderTextInput(
-            inputId = ns("q_range"),
-            label = "Quarter of request",
-            choices = q_range,
-            selected = c(min(q_range), max(q_range)),
-            grid = FALSE,
-            animate = FALSE,
-            width = "95%"
-          ),
-          shinyWidgets::pickerInput(
-            inputId = ns("region"),
-            label = "Region",
-            choices = unique(df_request$r_who_region) %>% na.omit(),
-            options = picker_opts(),
-            multiple = TRUE
-          ),
-          shinyWidgets::pickerInput(
-            inputId = ns("country"),
-            label = "Country",
-            choices = unique(df_request$r_country) %>% na.omit(),
-            options = picker_opts(search = TRUE),
-            multiple = TRUE
-          ),
-          shinyWidgets::pickerInput(
-            inputId = ns("status"),
-            label = "Status",
-            choices = unique(df_request$r_status) %>% na.omit(),
-            options = picker_opts(),
-            multiple = TRUE
-          ),
-          shinyWidgets::pickerInput(
-            inputId = ns("context"),
-            label = "Context",
-            choices = unique(df_request$r_context) %>% na.omit(),
-            options = picker_opts(),
-            multiple = TRUE
-          ),
-          shinyWidgets::pickerInput(
-            inputId = ns("mechanism"),
-            label = "Mechanism",
-            choices = unique(df_request$r_mechanism) %>% na.omit(),
-            options = picker_opts(),
-            multiple = TRUE
-          ),
-          shinyWidgets::pickerInput(
-            inputId = ns("agency"),
-            label = "Request Agency",
-            choices = unique(df_request$r_agency) %>% na.omit(),
-            options = picker_opts(),
-            multiple = TRUE
-          ),
-          shinyWidgets::pickerInput(
-            inputId = ns("vaccine"),
-            label = "Type of vaccine",
-            choices = unique(df_shipment$s_vaccine) %>% na.omit(),
-            options = picker_opts(),
-            multiple = TRUE
-          ),
-          actionButton(ns("go2"), "Update Data", icon = icon("database"), class = "btn-primary btn-sm", style = "color: #fff;"),
-          actionButton(ns("reset"), "Reset Inputs", icon = icon("arrows-rotate"), class = "btn-info btn-sm", style = "color: #fff;")
-          # actionButton(ns("close"), "Close", icon = icon("xmark"), class = "btn-danger btn-sm", style = "color: #fff;")
-        )
+        id = ns("resetable_filters"),
+        shinyWidgets::sliderTextInput(
+          inputId = ns("q_range"),
+          label = "Quarter of request",
+          choices = q_range,
+          selected = c(min(q_range), max(q_range)),
+          grid = FALSE,
+          animate = FALSE,
+          width = "95%",
+          
+        ),
+        shinyWidgets::pickerInput(
+          inputId = ns("region"),
+          label = "Region",
+          choices = unique(df_request$r_who_region) %>% na.omit(),
+          options = picker_opts(),
+          multiple = TRUE
+        ),
+        shinyWidgets::pickerInput(
+          inputId = ns("country"),
+          label = "Country",
+          choices = unique(df_request$r_country) %>% na.omit(),
+          options = picker_opts(search = TRUE),
+          multiple = TRUE
+        ),
+        shinyWidgets::pickerInput(
+          inputId = ns("status"),
+          label = "Status",
+          choices = unique(df_request$r_status) %>% na.omit(),
+          options = picker_opts(),
+          multiple = TRUE
+        ),
+        shinyWidgets::pickerInput(
+          inputId = ns("context"),
+          label = "Context",
+          choices = unique(df_request$r_context) %>% na.omit(),
+          options = picker_opts(),
+          multiple = TRUE
+        ),
+        shinyWidgets::pickerInput(
+          inputId = ns("mechanism"),
+          label = "Mechanism",
+          choices = unique(df_request$r_mechanism) %>% na.omit(),
+          options = picker_opts(),
+          multiple = TRUE
+        ),
+        shinyWidgets::pickerInput(
+          inputId = ns("agency"),
+          label = "Request Agency",
+          choices = unique(df_request$r_agency) %>% na.omit(),
+          options = picker_opts(),
+          multiple = TRUE
+        ),
+        shinyWidgets::pickerInput(
+          inputId = ns("vaccine"),
+          label = "Type of vaccine",
+          choices = unique(df_shipment$s_vaccine) %>% na.omit(),
+          options = picker_opts(),
+          multiple = TRUE
+        ),
+        actionButton(ns("go2"), "Update Data", icon = icon("database"), class = "btn-success btn-sm", style = "color: #fff;"),
+        actionButton(ns("reset"), "Reset Inputs", icon = icon("arrows-rotate"), class = "btn-warning btn-sm", style = "color: #fff;")
       )
     ),
     
@@ -94,6 +90,8 @@ mod_request_ui <- function(id) {
     
     uiOutput(ns("value_boxes")),
     
+    tags$hr(),
+    
     div(
       class = "row",
       div(
@@ -102,8 +100,8 @@ mod_request_ui <- function(id) {
           ns("var"),
           label = NULL,
           choices = c("Requests", "Doses"),
-          size = "sm",
-          status = "outline-primary",
+          size = "normal",
+          status = "outline-success",
           justified = FALSE
         )
       ),
@@ -113,8 +111,8 @@ mod_request_ui <- function(id) {
           ns("group"),
           label = NULL,
           choices = group_vars,
-          size = "sm",
-          status = "outline-primary",
+          size = "normal",
+          status = "outline-success",
           justified = FALSE
         )
       ),
@@ -124,8 +122,8 @@ mod_request_ui <- function(id) {
           ns("dose"),
           label = NULL,
           choices = dose_vars,
-          status = "outline-primary",
-          size = "sm",
+          status = "outline-success",
+          size = "normal",
           justified = FALSE
         )
       )
@@ -149,13 +147,10 @@ mod_request_ui <- function(id) {
         class = "p-0",
         as_fill_carrier(tags$div(id = "request-map-container", leaflet::leafletOutput(ns("map"))))
       )
-      # card_footer(
-      #   uiOutput(ns("map_footer"))
-      # )
     ),
     
     layout_column_wrap(
-      width = 1/2,
+      width = "600px",
       
       card(
         full_screen = TRUE,
@@ -168,7 +163,7 @@ mod_request_ui <- function(id) {
             choices = c("Year" = "year", "Quarter" = "quarter", "Month" = "month", "Week" = "week"),
             selected = "year",
             size = "sm",
-            status = "outline-primary"
+            status = "outline-success"
           )),
           div(class="p-2", shinyWidgets::pickerInput(
             ns("ts_date"),
@@ -183,9 +178,6 @@ mod_request_ui <- function(id) {
         card_body(
           highcharter::highchartOutput(ns("ts_chart"))
         )
-        # card_footer(
-        #   uiOutput(ns("cfr_footer"))
-        # )
       ),
       
       navs_pill_card(
@@ -203,7 +195,7 @@ mod_request_ui <- function(id) {
             choices = delay_choices,
             selected = delay_choices[1],
             options = picker_opts(actions = FALSE, search = FALSE),
-            width = 150,
+            width = 100,
             multiple = FALSE
           )),
           helpText("-"),
@@ -213,7 +205,7 @@ mod_request_ui <- function(id) {
             choices = delay_choices,
             selected = delay_choices[2],
             options = picker_opts(actions = FALSE, search = FALSE),
-            width = 150,
+            width = 100,
             multiple = FALSE
           )),
           div(class="p-2", shinyWidgets::radioGroupButtons(
@@ -221,37 +213,9 @@ mod_request_ui <- function(id) {
             label = NULL,
             choices = c("Stacked bars" = "normal", "Dodged bars" = "none"),
             size = "sm",
-            status = "outline-primary"
+            status = "outline-success"
           ))
         ),
-        
-        # sidebar = sidebar(
-        #   shinyWidgets::pickerInput(
-        #     ns("date_1"),
-        #     label = NULL,
-        #     choices = delay_choices,
-        #     selected = delay_choices[1],
-        #     options = picker_opts(actions = FALSE, search = FALSE),
-        #     width = 100,
-        #     multiple = FALSE
-        #   ),
-        #   helpText("-"),
-        #   shinyWidgets::pickerInput(
-        #     ns("date_2"),
-        #     label = NULL,
-        #     choices = delay_choices,
-        #     selected = delay_choices[2],
-        #     options = picker_opts(actions = FALSE, search = FALSE),
-        #     width = 100,
-        #     multiple = FALSE
-        #   ),
-        #   shinyWidgets::radioGroupButtons(
-        #     ns("delay_stacking"),
-        #     label = NULL,
-        #     choices = c("Stacked bars" = "normal", "Dodged bars" = "none"),
-        #     size = "sm"
-        #   )
-        # ),
         
         nav(
           title = shiny::icon("chart-column"),
@@ -265,82 +229,26 @@ mod_request_ui <- function(id) {
           gt::gt_output(ns("delay_tbl"))
         )
       )
+    ),
+    
+    card(
+      class = "my-3",
+      card_header(
+        class = "d-flex mb-0 align-items-center",
+        card_title(tagList("Request Timeline", tags$small(" (select one)"))),
+        div(class="p-2", shinyWidgets::pickerInput(
+          inputId = ns("demand"),
+          label = NULL,
+          choices = "",
+          width = 150,
+          options = picker_opts(search = TRUE),
+          multiple = FALSE
+        ))
+      ),
+      card_body(
+        timevis::timevisOutput(ns("timevis"))
+      )
     )
-    
-    # box_w_inputs(
-    #   width = 6,
-    #   title = tagList(shiny::icon("chart-column")),
-    #   inputs = tagList(
-    #     shinyWidgets::radioGroupButtons(
-    #       ns("ts_unit"),
-    #       label = NULL,
-    #       choices = c("Year" = "year", "Quarter" = "quarter", "Month" = "month", "Week" = "week"),
-    #       selected = "year",
-    #       size = "sm"
-    #     ),
-    #     shinyWidgets::pickerInput(
-    #       ns("ts_date"),
-    #       label = NULL,
-    #       choices = date_vars[1:2],
-    #       selected = date_vars[1],
-    #       options = picker_opts(actions = FALSE, search = FALSE),
-    #       width = 150,
-    #       multiple = FALSE
-    #     )
-    #   ),
-    #   highcharter::highchartOutput(ns("ts_chart")),
-    #   footer = uiOutput(ns("cfr_footer"))
-    # ),
-    # 
-    # tab_box_custom(
-    #   id = ns("delay_tabs"), width = 6, side = "right",
-    #   title = "Delays",
-    #   inputs = tagList(
-    #     #helpText("from:"),
-    #     shinyWidgets::pickerInput(
-    #       ns("date_1"),
-    #       label = NULL,
-    #       choices = delay_choices,
-    #       selected = delay_choices[1],
-    #       options = picker_opts(actions = FALSE, search = FALSE),
-    #       width = 100,
-    #       multiple = FALSE
-    #     ),
-    #     helpText("-"),
-    #     shinyWidgets::pickerInput(
-    #       ns("date_2"),
-    #       label = NULL,
-    #       choices = delay_choices,
-    #       selected = delay_choices[2],
-    #       options = picker_opts(actions = FALSE, search = FALSE),
-    #       width = 100,
-    #       multiple = FALSE
-    #     ),
-    #     shinyWidgets::radioGroupButtons(
-    #       ns("delay_stacking"),
-    #       label = NULL,
-    #       choices = c("Stacked bars" = "normal", "Dodged bars" = "none"),
-    #       size = "sm"
-    #     )
-    #   ),
-    #   tabPanel(shiny::icon("chart-column"), value = "chart", highcharter::highchartOutput(ns("delay"))),
-    #   tabPanel(shiny::icon("table"), value = "table", div(style = "min-height: 300px;", gt::gt_output(ns("delay_tbl"))))
-    # )
-    
-    # box_w_inputs(
-    #   width = 12,
-    #   title = tagList("Request Timeline", tags$small("(select one)")),
-    #   inputs = tagList(
-    #     shinyWidgets::pickerInput(
-    #       inputId = ns("demand"),
-    #       label = NULL,
-    #       choices = "",
-    #       options = picker_opts(search = TRUE),
-    #       multiple = FALSE
-    #     )
-    #   ),
-    #   timevis::timevisOutput(ns("timevis"))
-    # )
     
   )
 }
@@ -490,10 +398,11 @@ mod_request_server <- function(id) {
         showcase_layout = showcase_top_right()
       )
       # time decision
-      days <- glue::glue("{df_summary()$time_decision_av} days")
+      days <- as.character(glue::glue("{df_summary()$time_decision_av} days"))
+      # days <- df_summary()$time_decision_av
       time_decision <- value_box(
-        title = "Average decision time (days)",
-        value = df_summary()$time_decision_av,
+        title = "Average decision time",
+        value = days,
         tags$p(glue::glue("Min: {df_summary()$time_decision_min} days - Max: {df_summary()$time_decision_max} days")),
         theme_color = "danger",
         showcase = bsicons::bs_icon("clock"),
@@ -501,7 +410,7 @@ mod_request_server <- function(id) {
       )
       
       layout_column_wrap(
-        width = 1/5,
+        width = "220px",
         class = "mb-3",
         n_requests,
         n_doses,
@@ -510,68 +419,6 @@ mod_request_server <- function(id) {
         time_decision
       )
     })
-    
-    # output$n_requests <- renderUI({
-    #   r <- scales::number(df_summary()$n_requests)
-    #   a <- scales::number(df_summary()$n_approved)
-    #   ap <- scales::percent(df_summary()$pcnt_approved)
-    #   value_box(
-    #     title = "Requests received",
-    #     value = r,
-    #     tags$p(glue::glue("{a} ({ap}) approved")),
-    #     showcase = icon("list"),
-    #     theme_color = "info"
-    #   )
-    # })
-    # 
-    # output$n_doses <- renderUI({
-    #   r <- fmt_n_dose(df_summary()$n_dose_requested)
-    #   a <- fmt_n_dose(df_summary()$n_dose_approved)
-    #   ap <- scales::percent(df_summary()$pcnt_dose_approved)
-    #   value_box(
-    #     title = "Doses requested",
-    #     value = r,
-    #     tags$p(glue::glue("{a} ({ap}) approved")),
-    #     showcase = icon("vial"),
-    #     theme_color = "info"
-    #   )
-    # })
-    # 
-    # output$n_doses_shipped <- renderUI({
-    #   s <- fmt_n_dose(df_summary()$n_dose_shipped)
-    #   s_icg <- fmt_n_dose(df_summary()$n_dose_shipped_icg)
-    #   s_icg_p <- scales::percent(df_summary()$pcnt_dose_shipped_icg)
-    #   value_box(
-    #     title = "Doses shipped",
-    #     value = s,
-    #     tags$p(glue::glue("{s_icg} ({s_icg_p}) shipped with ICG")),
-    #     theme_color = "info",
-    #     showcase = icon("plane")
-    #   )
-    # })
-    # 
-    # output$n_countries <- renderUI({
-    #   n <- scales::number(df_summary()$n_countries)
-    #   na <- scales::number(df_summary()$n_countries_approved)
-    #   pcnt <- scales::percent(df_summary()$pcnt_countries_approved)
-    #   value_box(
-    #     title = "Countries",
-    #     value = n,
-    #     tags$p(glue::glue("{na} ({pcnt}) with an approved request")),
-    #     theme_color = "info",
-    #     showcase = icon("earth-africa")
-    #   )
-    # })
-    # 
-    # output$time_decision <- renderUI({
-    #   value_box(
-    #     title = "Average decision time",
-    #     value = glue::glue("{df_summary()$time_decision_av} days"),
-    #     tags$p(glue::glue("Min: {df_summary()$time_decision_min} days - Max: {df_summary()$time_decision_max} days")),
-    #     theme_color = "info",
-    #     showcase = icon("clock")
-    #   )
-    # })
     
     # ==========================================================================
     # MAP
