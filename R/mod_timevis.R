@@ -10,7 +10,8 @@ mod_timevis_ui <- function(id) {
         choices = c("Current year" = "ytd", "Past 6 months" = "6m", "Past 12 months" = "12m", "All period" = "all"),
         selected = "ytd",
         width = "100%",
-        direction = "vertical"
+        direction = "vertical",
+        status = "outline-success"
       ),
       shinyWidgets::pickerInput(
         inputId = ns("country"),
@@ -32,7 +33,7 @@ mod_timevis_ui <- function(id) {
     ),
     card(
       full_screen = FALSE,
-      class = "m-3",
+      class = "mx-3",
       card_header(
         card_title(bsicons::bs_icon("calendar-week"))
       ),

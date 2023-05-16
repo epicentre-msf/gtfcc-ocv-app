@@ -135,22 +135,23 @@ mod_request_ui <- function(id) {
       card_header(
         class = "d-flex justify-content-between align-items-center",
         shiny::icon("earth-africa"),
-        capture::capture(
-          selector = "#request-map-container",
-          filename = glue::glue("GTFCC-Map-{Sys.Date()}.png"),
-          icon("camera"),
-          "Download",
-          button_class = "btn btn-light btn-sm"
-        )
+        # capture::capture(
+        #   selector = paste0("#", ns("map")),
+        #   filename = glue::glue("GTFCC-Map-{Sys.Date()}.png"),
+        #   icon("camera"),
+        #   "Download",
+        #   button_class = "btn btn-light btn-sm"
+        # )
       ),
       card_body(
         class = "p-0",
-        as_fill_carrier(tags$div(id = "request-map-container", leaflet::leafletOutput(ns("map"))))
+        leaflet::leafletOutput(ns("map"))
+        # as_fill_carrier(tags$div(id = "request-map-container", leaflet::leafletOutput(ns("map"))))
       )
     ),
     
     layout_column_wrap(
-      width = "600px",
+      width = "500px",
       
       card(
         full_screen = TRUE,
@@ -410,7 +411,7 @@ mod_request_server <- function(id) {
       )
       
       layout_column_wrap(
-        width = "220px",
+        width = "200px",
         class = "mb-3",
         n_requests,
         n_doses,

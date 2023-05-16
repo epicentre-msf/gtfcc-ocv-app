@@ -4,18 +4,13 @@ ui <- tagList(
     tags$style(
       HTML(glue::glue("p {{font-family: '{p_font}';}}"))
     ),
-    # tags$link(rel = "stylesheet", type = "text/css", href = "styles.css"),
-    # tags$script(src = "addNavLink.js"),
-    # shinyWidgets::useShinydashboard(),
-    # pushbar::pushbar_deps(),
-    # cicerone::use_cicerone()
     shinyjs::useShinyjs(),
     waiter::use_waiter(),
     sever::useSever()
   ),
   
   page_navbar(
-    title = tagList(app_title, tags$small(glue::glue("last update: {date_updated}"))),
+    title = tagList(app_title, tags$small(glue::glue("data updated: {date_updated}"), class = "text-muted", style = "font-size: 0.6em;")),
     id = "tabs",
     window_title = app_title,
     fillable = TRUE,
@@ -56,9 +51,14 @@ ui <- tagList(
       )
     ),
     nav_item(
-      tags$img(
-        src = "gtfcc-logo.jpg",
-        height = "40px"
+      tags$a(
+        tags$img(
+          src = "gtfcc-logo.jpg",
+          height = "40px"
+        ),
+        class = "p-0",
+        href = "https://www.gtfcc.org/",
+        target = "_blank"
       )
     )
   ),
