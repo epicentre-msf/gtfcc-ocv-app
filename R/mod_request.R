@@ -135,13 +135,12 @@ mod_request_ui <- function(id) {
       card_header(
         class = "d-flex justify-content-between align-items-center",
         shiny::icon("earth-africa"),
-        # capture::capture(
-        #   selector = paste0("#", ns("map")),
-        #   filename = glue::glue("GTFCC-Map-{Sys.Date()}.png"),
-        #   icon("camera"),
-        #   "Download",
-        #   button_class = "btn btn-light btn-sm"
-        # )
+        shinyscreenshot::screenshotButton(
+          id = ns("map"),
+          filename = glue::glue("GTFCC-Map-{Sys.Date()}"),
+          label = "Download",
+          class = "btn-light btn-sm"
+        )
       ),
       card_body(
         class = "p-0",
