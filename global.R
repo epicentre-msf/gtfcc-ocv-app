@@ -12,7 +12,7 @@ library(leaflet)
 library(leaflet.minicharts)
 library(highcharter)
 library(gtsummary)
-library(screenshotButton)
+library(shinyscreenshot)
 library(timevis)
 source(here::here("R", "utils_data.R"))
 
