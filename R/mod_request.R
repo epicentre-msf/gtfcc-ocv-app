@@ -134,7 +134,7 @@ mod_request_ui <- function(id) {
       class = "mb-3",
       card_header(
         class = "d-flex justify-content-between align-items-center",
-        shiny::icon("earth-africa"),
+        uiOutput(ns("map_title")),
         shinyscreenshot::screenshotButton(
           id = ns("map"),
           filename = glue::glue("GTFCC-Map-{Sys.Date()}"),
@@ -145,7 +145,6 @@ mod_request_ui <- function(id) {
       card_body(
         class = "p-0",
         leaflet::leafletOutput(ns("map"))
-        # as_fill_carrier(tags$div(id = "request-map-container", leaflet::leafletOutput(ns("map"))))
       )
     ),
     
@@ -156,7 +155,7 @@ mod_request_ui <- function(id) {
         full_screen = TRUE,
         card_header(
           class = "d-flex mb-3 align-items-center",
-          card_title(class="me-auto p-2", shiny::icon("chart-column")),
+          card_title(class="me-auto p-2", tagList(shiny::icon("chart-column"), "Time-series")),
           div(class="p-2", shinyWidgets::radioGroupButtons(
             ns("ts_unit"),
             label = NULL,
@@ -188,7 +187,7 @@ mod_request_ui <- function(id) {
         
         title = div(
           class = "d-flex mb-0 align-items-center",
-          div(class="p-2", card_title("Delays")),
+          div(class="p-2", card_title(tagList(shiny::icon("clock"), "Delays"))),
           div(class="p-2", shinyWidgets::pickerInput(
             ns("date_1"),
             label = NULL,
@@ -264,7 +263,7 @@ mod_request_server <- function(id) {
     # ==========================================================================
     # PUSHBAR SETUP
     # ==========================================================================
-    # pushbar::setup_pushbar() 
+    # pushbar::setup_pushbar()
     # observeEvent(input$open, {
     #   if (input$open == 1) {
     #     pushbar::pushbar_open(id = ns("filters"))
@@ -276,7 +275,60 @@ mod_request_server <- function(id) {
     # })
     # observeEvent(input$go2, { pushbar::pushbar_close() })
     # observeEvent(input$close, { pushbar::pushbar_close() })
-    observeEvent(input$reset, { shinyjs::reset("resetable_filters") })
+
+    # ==========================================================================
+    # OBSERVERS
+    # ==========================================================================
+
+    observeEvent(input$reset, {
+      shinyjs::reset("resetable_filters")
+    })
+    
+        observeEvent(input$var, {
+      cond <- (input$var == "Doses")
+      shinyjs::toggle("dose", condition = cond, anim = TRUE, animType = "fade")
+    })
+    
+    observe({
+      ts_date_selected <- isolate(input$ts_date)
+      if (input$var == "Doses" & input$dose == "s_dose_ship") {
+        shinyWidgets::updatePickerInput(
+          session,
+          "ts_date",
+          choices = date_vars,
+          selected = "s_date_delivery"
+        )
+      } else if (ts_date_selected %in% date_vars[1:2]) {
+        shinyWidgets::updatePickerInput(
+          session,
+          "ts_date",
+          choices = date_vars[1:2],
+          selected = ts_date_selected
+        )
+      } else {
+        shinyWidgets::updatePickerInput(
+          session,
+          "ts_date",
+          choices = date_vars[1:2],
+          selected = date_vars[1]
+        )
+      }
+    })
+
+    var_lab <- reactive({
+      lab <- paste("Number of", tolower(input$var))
+      if (input$var == "Doses") {
+        lab <- paste(lab, tolower(names(dose_vars[dose_vars == input$dose])))
+      }
+      lab
+    })
+
+    output$map_title <- renderUI({
+      card_title(tagList(
+        shiny::icon("earth-africa"),
+        stringr::str_replace(var_lab(), "Number", "Map")
+      ))
+    })
     
     # ==========================================================================
     # DATA PREP
@@ -499,30 +551,7 @@ mod_request_server <- function(id) {
         # leaflet::leafletProxy("map", session) %>% leaflet::removeShape("highlight")
       }
     })
-    
-    observeEvent(input$var, {
-      cond <- (input$var == "Doses")
-      shinyjs::toggle("dose", condition = cond, anim = TRUE, animType = "fade")
-    })
-    
-    observe({
-      ts_date_selected <- isolate(input$ts_date)
-      if (input$var == "Doses" & input$dose == "s_dose_ship") {
-        shinyWidgets::updatePickerInput(
-          session,
-          "ts_date",
-          choices = date_vars,
-          selected = "s_date_delivery"
-        )
-      } else {
-        shinyWidgets::updatePickerInput(
-          session,
-          "ts_date",
-          choices = date_vars[1:2],
-          selected = ts_date_selected
-        )
-      }
-    })
+  
     
     df_map <- reactive({
       map_var <- rlang::sym(input$var)
@@ -568,14 +597,19 @@ mod_request_server <- function(id) {
       df_map <- df_map()
       chartData <- df_map %>% 
         select(any_of(grouping_levels))
-      #select(-country, -iso_a3, -lon, -lat, -total)
+      # select(-country, -iso_a3, -lon, -lat, -total)
       pie_width <- 45 * sqrt(df_map$total) / sqrt(max(df_map$total))
+      
+      # browser()
+
+      mp <- map_pal(chartData)
       
       leaflet::leafletProxy("map", session) %>%
         updateMinicharts(
           layerId = df_map$country,
           chartdata = chartData,
           width = pie_width,
+          colorPalette = mp,
           opacity = .8,
           legend = TRUE,
           showLabels = TRUE,
@@ -664,13 +698,16 @@ mod_request_server <- function(id) {
       
       date_lab <- names(date_vars[date_vars == isolate(input$ts_date)])
       
+      hc_pal <- set_pal(df_ts, input$group)
+      
       hc %>% 
         hc_title(text = NULL) %>%
         hc_chart(zoomType = "x") %>%
+        hc_colors(hc_pal) %>% 
         hc_xAxis(type = x_type, title = list(text = date_lab), crosshair = TRUE) %>% 
         highcharter::hc_yAxis_multiples(
           list(
-            title = list(text = ""),
+            title = list(text = isolate(var_lab())),
             allowDecimals = FALSE
           ),
           list(
@@ -730,6 +767,8 @@ mod_request_server <- function(id) {
         count(!!delay_group, delay) %>% 
         mutate(!!delay_group := factor(!!delay_group, levels = grouping_levels) %>% forcats::fct_explicit_na("Unknown"))
       
+      hc_pal <- set_pal(df_hc, input$group)
+      
       stacking <- input$delay_stacking
       if (input$delay_stacking == "none") {
         stacking <- NULL
@@ -738,6 +777,7 @@ mod_request_server <- function(id) {
       hchart(df_hc, "column", hcaes(delay, n, group = !!delay_group)) %>%
         hc_chart(zoomType = "x") %>%
         hc_title(text = NULL) %>%
+        hc_colors(hc_pal) %>% 
         hc_xAxis(
           title = list(text = "Days"),
           allowDecimals = FALSE,
@@ -754,7 +794,7 @@ mod_request_server <- function(id) {
             )
           )
         ) %>%
-        hc_yAxis(title = list(text = ""), allowDecimals = FALSE) %>%
+        hc_yAxis(title = list(text = "Number of requests"), allowDecimals = FALSE) %>%
         hc_plotOptions(column = list(stacking = stacking)) %>% 
         hc_tooltip(shared = TRUE) %>%
         hc_legend(
@@ -800,8 +840,7 @@ mod_request_server <- function(id) {
     
     observe({
       df_demands <- df_data() %>% distinct(r_country, r_demand_id) %>% arrange(r_country, desc(r_demand_id))
-      demands <- split(df_demands$r_demand_id, df_demands$r_country)
-      # browser()
+      demands <- split(purrr::set_names(df_demands$r_demand_id), df_demands$r_country)
       shinyWidgets::updatePickerInput(session, "demand", choices = demands)
     })
     
