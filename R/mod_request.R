@@ -599,8 +599,6 @@ mod_request_server <- function(id) {
         select(any_of(grouping_levels))
       # select(-country, -iso_a3, -lon, -lat, -total)
       pie_width <- 45 * sqrt(df_map$total) / sqrt(max(df_map$total))
-      
-      # browser()
 
       mp <- map_pal(chartData)
       
