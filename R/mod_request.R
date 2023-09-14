@@ -476,6 +476,8 @@ mod_request_server <- function(id) {
     # MAP
     # ==========================================================================
     
+    # MAP
+    
     output$map <- leaflet::renderLeaflet({
       bbox <- c(xmin = -180, ymin = -55.61183, xmax = 180, ymax = 83.64513)
       
@@ -551,8 +553,6 @@ mod_request_server <- function(id) {
         # leaflet::leafletProxy("map", session) %>% leaflet::removeShape("highlight")
       }
     })
-  
-    
     df_map <- reactive({
       map_var <- rlang::sym(input$var)
       map_group <- rlang::sym(input$group)
@@ -614,6 +614,30 @@ mod_request_server <- function(id) {
           type = "pie"
         )
     })
+    
+    # MAP_CHART
+    #make df for the highcarter barplot 
+    
+    df_hc_bar <- reactive({
+      
+      map_chart_var <- rlang::sym(input$var)
+      map_chart_group <- rlang::sym(input$group)
+      map_chart_dose_vars <- rlang::sym(input$dose)
+      
+      #use function to prepare the data
+      df_hc_bar(df_data(), 
+                request_dose = input$var,
+                group_var = !!map_chart_group,  
+                dose_type = !!map_chart_dose_vars) 
+    })
+    
+    #Use the df_hc_bar inside the barplot function
+    
+    output$map_chart <- renderHighchart(
+      
+      hc_bar(df_hc_bar(), input$var)
+      
+      )
     
     # ==========================================================================
     # TIME-SERIES
@@ -863,6 +887,5 @@ mod_request_server <- function(id) {
         )
       )
     })
-    
   })
 }
