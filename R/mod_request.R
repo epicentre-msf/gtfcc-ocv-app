@@ -609,24 +609,25 @@ mod_request_server <- function(id) {
     # MAP_CHART
     #make df for the highcarter barplot 
     
-    df_hc_bar <- reactive({
-      
-      map_chart_var <- rlang::sym(input$var)
+    df_map_chart <- reactive({
+    
       map_chart_group <- rlang::sym(input$group)
       map_chart_dose_vars <- rlang::sym(input$dose)
       
       #use function to prepare the data
-      df_hc_bar(df_data(), 
+      df_hc_bar(df_data = df_data(), 
                 request_dose = input$var,
                 group_var = !!map_chart_group,  
-                dose_type = !!map_chart_dose_vars) 
+                dose_type = !!map_chart_dose_vars ) 
+      
     })
     
     #Use the df_hc_bar inside the barplot function
     
     output$map_chart <- renderHighchart(
       
-      hc_bar(df_hc_bar(), input$var)
+      hc_bar(hc_bar_dat = df_map_chart(), 
+             request_dose = input$var)
       
       )
     

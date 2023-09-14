@@ -130,13 +130,13 @@ get_delay_df <- function(df_timeline) {
 #function to prepare the data
 
 df_hc_bar <- function(df_data, 
+                      request_dose, 
                       group_var, 
-                      request_dose = c("Doses", "Requests"), 
-                      dose_type = c(r_dose_request, r_dose_approve, s_dose_ship) ) {
+                      dose_type ) {
   
   if(request_dose == "Doses") {
     
-    df_data %>% 
+    df <- df_data %>% 
       
       group_by(r_country, group = {{group_var}}) %>% 
       
@@ -152,22 +152,38 @@ df_hc_bar <- function(df_data,
     
   } else if(request_dose == "Requests") {
     
-    df_data %>% 
+    df <- df_data %>% 
       
-      count(r_country, group = {{group_var}}) %>% 
+      count(r_country, 
+            group = {{group_var}}) %>% 
       
-      arrange(desc(n) )
+      group_by(r_country) %>% 
+      
+      mutate(tot = sum(n, na.rm = TRUE)) %>% 
+      
+      ungroup() %>% 
+      
+      mutate(index = as.numeric(fct_reorder(r_country, desc(tot))))
   }
+  
+  return(df)
 } 
 
 #function to make the map chart barplot   
+
+# - add percentages in tooltip 
+# - add totals on top of bars 
+
 hc_bar <- function(hc_bar_dat, request_dose) {
   
   hchart(hc_bar_dat, 
          
          "column", 
          
-         hcaes(index, n, group = group, name = r_country)) %>%
+         hcaes(index, 
+               n, 
+               group = group, 
+               name = r_country)) %>%
     
     hc_chart(zoomType = "x") %>%
     
