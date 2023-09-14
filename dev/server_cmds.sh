@@ -5,6 +5,9 @@ rsync -zavh /Users/paul/epicentre/gtfcc-ocv-app/data episerv:/home/epicentre/gtf
 ssh shinyproxy "rm -rf /srv/shiny-server/ocv/.cache/*"
 ssh episerv "rm -rf /home/epicentre/gtfcc-ocv-app/.cache/*"
 
+# pull data on server locally
+rsync -zavh episerv:/home/epicentre/gtfcc-ocv-app/data /Users/paul/epicentre/gtfcc-ocv-app/
+
 # https://reports.msf.net/testing/
 docker run \
 --rm \
