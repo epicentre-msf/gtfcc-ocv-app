@@ -1,31 +1,65 @@
 ui <- tagList(
   tags$head(
-    tags$link(href = google_font(app_font), rel = "stylesheet"),
-    tags$link(rel = "stylesheet", type = "text/css", href = "styles.css"),
-    tags$script(src = "addNavLink.js"),
+    tags$link(href = google_font(p_font), rel = "stylesheet"),
+    tags$style(
+      HTML(glue::glue("p {{font-family: '{p_font}';}}"))
+    ),
     shinyjs::useShinyjs(),
-    shinyWidgets::useShinydashboard(),
-    pushbar::pushbar_deps(),
     waiter::use_waiter(),
-    sever::useSever(),
-    cicerone::use_cicerone()
+    sever::useSever()
   ),
   
-  navbarPage(
-    title = tagList(app_title, tags$small(glue::glue("last update: {date_updated}"))),
-    windowTitle = app_title,
-    position = "fixed-top",
-    collapsible = TRUE,
+  page_navbar(
+    title = tagList(app_title, tags$small(glue::glue("data updated: {date_updated}"), class = "text-muted", style = "font-size: 0.6em;")),
     id = "tabs",
+    window_title = app_title,
+    fillable = TRUE,
+    collapsible = TRUE,
+    inverse = FALSE,
+    theme = bs_theme(
+      base_font = font_google(
+        app_font, 
+        wght = c(300, 400, 500, 600, 700, 800),
+        ital = c(0, 1)
+      ),
+      bootswatch = "litera",
+      success = SUCCESS,
+      warning = WARNING
+      # "navbar-bg" = "#f8f9fa",
+      # "navbar-light-bg" = "#f8f9fa",
+      # "navbar-dark-bg" = "#f8f9fa",
+      # secondary = "#D37331",
+      # success = "#94BA3B"
+    ),
     
     # navbar tabs here
-    tabPanel(
+    nav(
       title = "Requests", value = "request", icon = icon("list"),
       mod_request_ui("request")
     ),
-    tabPanel(
+    nav(
       title = "Timeline", value = "timevis", icon = icon("chart-column"),
       mod_timevis_ui("timevis")
+    ),
+    nav_spacer(),
+    nav_item(
+      tags$a(
+        shiny::icon("github"),
+        "Report an issue",
+        href = "https://github.com/epicentre-msf/gtfcc-ocv-app/issues",
+        target = "_blank"
+      )
+    ),
+    nav_item(
+      tags$a(
+        tags$img(
+          src = "gtfcc-logo.jpg",
+          height = "40px"
+        ),
+        class = "p-0",
+        href = "https://www.gtfcc.org/",
+        target = "_blank"
+      )
     )
   ),
   waiter_preloader(html = spin_3())

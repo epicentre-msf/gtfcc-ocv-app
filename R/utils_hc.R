@@ -13,6 +13,7 @@ pal20 <- c(
 )
 
 pal10 <- leaflet.minicharts::d3.schemeCategory10
+pal10[7] <- "#e377c2"
 
 # pal10 <- c(
 #   "#4E79A7FF", "#F28E2BFF", "#E15759FF", "#76B7B2FF", "#59A14FFF",

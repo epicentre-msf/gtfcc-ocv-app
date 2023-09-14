@@ -1,24 +1,28 @@
 library(shiny)
+library(bslib)
+library(bsicons)
 library(shinylogs)
 library(tidyverse)
 library(lubridate)
 library(magrittr)
 library(waiter)
 library(sever)
-library(cicerone)
 library(shinyWidgets)
-library(shinydashboard)
 library(leaflet)
 library(leaflet.minicharts)
 library(highcharter)
 library(gtsummary)
-library(capture)
+library(shinyscreenshot)
 library(timevis)
 source(here::here("R", "utils_data.R"))
 
 app_name <- "gtfcc_ocv"
 app_title <- "GTFCC OCV"
 app_font <- "Alegreya Sans"
+p_font <- "Merriweather"
+
+SUCCESS <- "#19bdb4"
+WARNING <- "#d39234"
 
 # local disk cache
 shiny::shinyOptions(cache = cachem::cache_disk(here::here(".cache")))
@@ -43,7 +47,7 @@ q_range <- get_q_range(c(
 
  disconnected <- sever::sever_default(
   title = "Disconnected",
-  subtitle = "Sorry something went wrong or your session timed-out",
+  subtitle = "Sorry your session timed-out or something went wrong",
   button = "Reconnect",
   button_class = "info"
 )

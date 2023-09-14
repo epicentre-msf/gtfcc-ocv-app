@@ -10,5 +10,5 @@ docker run \
 --rm \
 -p 5858:3838 \
 -v /home/epicentre/gtfcc-ocv-app:/root/app \
- epicentremsf/shinytvgeo \
+ gtfcc-app \
  R -e "shiny::runApp('/root/app', port = 3838, host = '0.0.0.0')"

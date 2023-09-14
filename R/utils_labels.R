@@ -16,3 +16,33 @@ date_vars <- c(
 )
 
 grouping_levels <- c("GTFCC", "ICG", "Loan", "Approved", "Not approved", "Pending", "Cancelled")
+
+set_pal <- function(df, var) {
+  pal <- c(
+    "GTFCC" = "#1f77b4",
+    "ICG" = "#ff7f0e",
+    "Loan" = "#2ca02c",
+    "Approved" = "#2ca02c",
+    "Not approved" = "#d62728",
+    "Pending" = "#1f77b4",
+    "Cancelled" = "#ff7f0e",
+    "Unknown" = "#7f7f7f"
+  )
+  levels_in_data <- levels(droplevels(df[[var]]))
+  unname(pal[names(pal) %in% levels_in_data])
+}
+
+map_pal <- function(df) {
+  pal <- c(
+    "GTFCC" = "#1f77b4",
+    "ICG" = "#ff7f0e",
+    "Loan" = "#2ca02c",
+    "Approved" = "#2ca02c",
+    "Not approved" = "#d62728",
+    "Pending" = "#1f77b4",
+    "Cancelled" = "#ff7f0e",
+    "Unknown" = "#7f7f7f"
+  )
+  levels_in_data <- colnames(df)
+  unname(pal[names(pal) %in% levels_in_data])
+}
