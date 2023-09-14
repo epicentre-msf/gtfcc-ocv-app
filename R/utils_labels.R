@@ -15,6 +15,15 @@ date_vars <- c(
   "Date of delivery" = "s_date_delivery"
 )
 
+delay_vars <- c(
+  "Request -> Decision" = "r_d",
+  "Decision -> 1st Shipment" = "d_s",
+  "1st Shipment -> Round 1" = "s_r1",
+  "Round 1 -> Round 2" = "r1_r2",
+  "Request -> 1st Shipment" = "r_s",
+  "Request -> Round 1" = "r_r1"
+)
+
 grouping_levels <- c("GTFCC", "ICG", "Loan", "Approved", "Not approved", "Pending", "Cancelled")
 
 set_pal <- function(df, var) {

@@ -186,34 +186,49 @@ mod_request_ui <- function(id) {
         id = ns("delay_tabs"),
         
         title = div(
-          class = "d-flex mb-0 align-items-center",
-          tags$span(class="pe-1", tagList(shiny::icon("clock"), "Delays")),
-          div(class="pe-1", shinyWidgets::pickerInput(
-            ns("date_1"),
-            label = NULL,
-            choices = delay_choices,
-            selected = delay_choices[1],
-            options = picker_opts(actions = FALSE, search = FALSE),
-            width = 80,
-            multiple = FALSE
-          )),
-          helpText("-"),
-          div(class="pe-1", shinyWidgets::pickerInput(
-            ns("date_2"),
-            label = NULL,
-            choices = delay_choices,
-            selected = delay_choices[2],
-            options = picker_opts(actions = FALSE, search = FALSE),
-            width = 80,
-            multiple = FALSE
-          )),
-          div(class="pe-1", shinyWidgets::radioGroupButtons(
-            ns("delay_stacking"),
-            label = NULL,
-            choices = c("Stacked bars" = "normal", "Dodged bars" = "none"),
-            size = "sm",
-            status = "outline-success"
-          ))
+          class = "d-flex justify-content-between align-items-center",
+          tags$span(
+            class="pe-2",
+            tagList(shiny::icon("clock"), "Delays")
+          ),
+          div(
+            # class = "pe-2",
+            shinyWidgets::pickerInput(
+              ns("delay_var"),
+              label = NULL,
+              choices = delay_vars,
+              options = picker_opts(actions = FALSE, search = FALSE),
+              width = 150,
+              multiple = FALSE
+            )
+          )
+          
+          # div(class="pe-1", shinyWidgets::pickerInput(
+          #   ns("date_1"),
+          #   label = NULL,
+          #   choices = delay_choices,
+          #   selected = delay_choices[1],
+          #   options = picker_opts(actions = FALSE, search = FALSE),
+          #   width = 80,
+          #   multiple = FALSE
+          # )),
+          # helpText("-"),
+          # div(class="pe-1", shinyWidgets::pickerInput(
+          #   ns("date_2"),
+          #   label = NULL,
+          #   choices = delay_choices,
+          #   selected = delay_choices[2],
+          #   options = picker_opts(actions = FALSE, search = FALSE),
+          #   width = 80,
+          #   multiple = FALSE
+          # )),
+          # div(class="pe-1", shinyWidgets::radioGroupButtons(
+          #   ns("delay_stacking"),
+          #   label = NULL,
+          #   choices = c("Stacked bars" = "normal", "Dodged bars" = "none"),
+          #   size = "sm",
+          #   status = "outline-success"
+          # ))
         ),
         
         nav_panel(
@@ -226,7 +241,9 @@ mod_request_ui <- function(id) {
           title = shiny::icon("table"),
           value = "table",
           gt::gt_output(ns("delay_tbl"))
-        )
+        ),
+
+        card_footer("Delays are calculated on ICG data only.")
       )
     ),
     
@@ -723,18 +740,30 @@ mod_request_server <- function(id) {
     # DELAYS
     # ==========================================================================
     
-    observe({
-      cond <- (input$delay_tabs == "chart")
-      shinyjs::toggle("delay_stacking", condition = cond, anim = TRUE, animType = "fade")
-      shinyjs::toggle("delay_log", condition = cond, anim = TRUE, animType = "fade")
-    })
+    # observe({
+    #   cond <- (input$delay_tabs == "chart")
+    #   shinyjs::toggle("delay_stacking", condition = cond, anim = TRUE, animType = "fade")
+    #   shinyjs::toggle("delay_log", condition = cond, anim = TRUE, animType = "fade")
+    # })
     
     df_delay <- reactive({
-      range <- c(input$date_1, input$date_2)
+
+      range <- switch(
+        input$delay_var,
+        "r_d" = c("request_1", "decision_1"),
+        "d_s" = c("decision_1", "shipment_1"),
+        "s_r1" = c("shipment_1", "round_1"),
+        "r1_r2" = c("round_1", "round_2"),
+        "r_s" = c("request_1", "shipment_1"),
+        "r_r1" = c("request_1", "round_1")
+      )
+
+      # range <- c(input$date_1, input$date_2)
       date_1 <- rlang::sym(range[1])
       date_2 <- rlang::sym(range[2])
-      
-      df_delay <- app_data$df_delay %>% 
+
+      df_delay <- app_data$df_delay %>%
+        filter(r_mechanism == "ICG") %>% 
         # filter to requests in pre-filtered df_data
         semi_join(df_data(), by = "r_demand_id") %>% 
         select(r_demand_id, r_mechanism, r_status, event, date) %>% 
@@ -753,20 +782,20 @@ mod_request_server <- function(id) {
       
       df_hc <- df_delay %>% 
         drop_na(delay) %>% 
-        count(!!delay_group, delay) %>% 
-        mutate(!!delay_group := factor(!!delay_group, levels = grouping_levels) %>% forcats::fct_explicit_na("Unknown"))
+        count(delay)
+        # mutate(!!delay_group := factor(!!delay_group, levels = grouping_levels) %>% forcats::fct_explicit_na("Unknown"))
       
-      hc_pal <- set_pal(df_hc, input$group)
+      # hc_pal <- set_pal(df_hc, input$group)
       
-      stacking <- input$delay_stacking
-      if (input$delay_stacking == "none") {
-        stacking <- NULL
-      }
+      # stacking <- input$delay_stacking
+      # if (input$delay_stacking == "none") {
+      #   stacking <- NULL
+      # }
       
-      hchart(df_hc, "column", hcaes(delay, n, group = !!delay_group)) %>%
+      hchart(df_hc, "column", hcaes(delay, n)) %>%
         hc_chart(zoomType = "x") %>%
         hc_title(text = NULL) %>%
-        hc_colors(hc_pal) %>% 
+        # hc_colors(hc_pal) %>% 
         hc_xAxis(
           title = list(text = "Days"),
           allowDecimals = FALSE,
@@ -784,7 +813,7 @@ mod_request_server <- function(id) {
           )
         ) %>%
         hc_yAxis(title = list(text = "Number of requests"), allowDecimals = FALSE) %>%
-        hc_plotOptions(column = list(stacking = stacking)) %>% 
+        hc_plotOptions(column = list(stacking = "normal")) %>% 
         hc_tooltip(shared = TRUE) %>%
         hc_legend(
           title = list(text = ""),
