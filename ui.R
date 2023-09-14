@@ -1,8 +1,9 @@
 ui <- tagList(
   tags$head(
-    tags$link(href = google_font(p_font), rel = "stylesheet"),
+    tags$style(".value-box-area {padding: 5px !important;}"),
+    # tags$link(href = google_font(p_font), rel = "stylesheet"),
     tags$style(
-      HTML(glue::glue("p {{font-family: '{p_font}';}}"))
+      HTML(glue::glue("p {{font-family: '{app_font}';}}"))
     ),
     shinyjs::useShinyjs(),
     waiter::use_waiter(),
@@ -10,7 +11,14 @@ ui <- tagList(
   ),
   
   page_navbar(
-    title = tagList(app_title, tags$small(glue::glue("data updated: {date_updated}"), class = "text-muted", style = "font-size: 0.6em;")),
+    title = tagList(
+      app_title,
+      tags$small(
+        glue::glue("data updated: {date_updated}"),
+        class = "text-muted",
+        style = "font-size: 0.6em;"
+      )
+    ),
     id = "tabs",
     window_title = app_title,
     fillable = TRUE,
@@ -22,22 +30,18 @@ ui <- tagList(
         wght = c(300, 400, 500, 600, 700, 800),
         ital = c(0, 1)
       ),
-      bootswatch = "litera",
       success = SUCCESS,
-      warning = WARNING
-      # "navbar-bg" = "#f8f9fa",
-      # "navbar-light-bg" = "#f8f9fa",
-      # "navbar-dark-bg" = "#f8f9fa",
-      # secondary = "#D37331",
-      # success = "#94BA3B"
+      warning = WARNING,
+      font_scale = 0.8,
+      bootswatch = "litera"
     ),
     
     # navbar tabs here
-    nav(
+    nav_panel(
       title = "Requests", value = "request", icon = icon("list"),
       mod_request_ui("request")
     ),
-    nav(
+    nav_panel(
       title = "Timeline", value = "timevis", icon = icon("chart-column"),
       mod_timevis_ui("timevis")
     ),

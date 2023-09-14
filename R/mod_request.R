@@ -67,26 +67,10 @@ mod_request_ui <- function(id) {
           options = picker_opts(),
           multiple = TRUE
         ),
-        actionButton(ns("go2"), "Update Data", icon = icon("database"), class = "btn-success btn-sm", style = "color: #fff;"),
+        actionButton(ns("go"), "Update Data", icon = icon("database"), class = "btn-success btn-sm", style = "color: #fff;"),
         actionButton(ns("reset"), "Reset Inputs", icon = icon("arrows-rotate"), class = "btn-warning btn-sm", style = "color: #fff;")
       )
     ),
-    
-    
-    # fluidRow(
-    #   column(
-    #     width = 12, class = "header-title",
-    #     div_inline(
-    #       h1("GTFCC OCV Requests")
-    #     ),
-    #     div_inline(
-    #       actionButton(ns("open"), "Data Filters", icon = icon("filter"), class = "btn-primary btn-sm", style = "color: #fff;")
-    #     ),
-    #     tags$p("")
-    #   )
-    # ),
-    
-    # verbatimTextOutput(outputId = ns("geo_select")),
     
     uiOutput(ns("value_boxes")),
     
@@ -100,7 +84,7 @@ mod_request_ui <- function(id) {
           ns("var"),
           label = NULL,
           choices = c("Requests", "Doses"),
-          size = "normal",
+          size = "sm",
           status = "outline-success",
           justified = FALSE
         )
@@ -111,7 +95,7 @@ mod_request_ui <- function(id) {
           ns("group"),
           label = NULL,
           choices = group_vars,
-          size = "normal",
+          size = "sm",
           status = "outline-success",
           justified = FALSE
         )
@@ -123,40 +107,57 @@ mod_request_ui <- function(id) {
           label = NULL,
           choices = dose_vars,
           status = "outline-success",
-          size = "normal",
+          size = "sm",
           justified = FALSE
         )
       )
     ),
     
-    card(
+    # Geo tabs ==============================================
+    navset_card_tab(
       full_screen = TRUE,
-      class = "mb-3",
-      card_header(
+      wrapper = \(...) {bslib::card_body(..., padding = 0)},
+
+      title = div(
         class = "d-flex justify-content-between align-items-center",
         uiOutput(ns("map_title")),
         shinyscreenshot::screenshotButton(
           id = ns("map"),
           filename = glue::glue("GTFCC-Map-{Sys.Date()}"),
           label = "Download",
-          class = "btn-light btn-sm"
+          class = "btn-outline-success btn-sm pe-2"
         )
       ),
-      card_body(
-        class = "p-0",
+
+      nav_panel(
+        title = shiny::icon("globe-africa"),
+        value = "map",
         leaflet::leafletOutput(ns("map"))
+      ),
+
+      nav_panel(
+        title = shiny::icon("chart-column"),
+        value = "chart",
+        highcharter::highchartOutput(ns("map_chart"))
+      ),
+      
+      nav_panel(
+        title = shiny::icon("table"),
+        value = "table",
+        gt::gt_output(ns("map_tbl"))
       )
     ),
     
     layout_column_wrap(
       width = "500px",
       
+      # Time series ==============================================
       card(
         full_screen = TRUE,
         card_header(
           class = "d-flex mb-3 align-items-center",
-          card_title(class="me-auto p-2", tagList(shiny::icon("chart-column"), "Time-series")),
-          div(class="p-2", shinyWidgets::radioGroupButtons(
+          tags$span(class="me-auto pe-1", shiny::icon("chart-column"), "Time-series"),
+          div(class="pe-1", shinyWidgets::radioGroupButtons(
             ns("ts_unit"),
             label = NULL,
             choices = c("Year" = "year", "Quarter" = "quarter", "Month" = "month", "Week" = "week"),
@@ -164,7 +165,7 @@ mod_request_ui <- function(id) {
             size = "sm",
             status = "outline-success"
           )),
-          div(class="p-2", shinyWidgets::pickerInput(
+          div(class="pe-1", shinyWidgets::pickerInput(
             ns("ts_date"),
             label = NULL,
             choices = date_vars[1:2],
@@ -179,35 +180,34 @@ mod_request_ui <- function(id) {
         )
       ),
       
-      navs_pill_card(
+      # Delay tabs ==============================================
+      navset_card_tab(
         full_screen = TRUE,
         id = ns("delay_tabs"),
         
-        # title = card_title("Delays"),
-        
         title = div(
           class = "d-flex mb-0 align-items-center",
-          div(class="p-2", card_title(tagList(shiny::icon("clock"), "Delays"))),
-          div(class="p-2", shinyWidgets::pickerInput(
+          tags$span(class="pe-1", tagList(shiny::icon("clock"), "Delays")),
+          div(class="pe-1", shinyWidgets::pickerInput(
             ns("date_1"),
             label = NULL,
             choices = delay_choices,
             selected = delay_choices[1],
             options = picker_opts(actions = FALSE, search = FALSE),
-            width = 100,
+            width = 80,
             multiple = FALSE
           )),
           helpText("-"),
-          div(class="p-2", shinyWidgets::pickerInput(
+          div(class="pe-1", shinyWidgets::pickerInput(
             ns("date_2"),
             label = NULL,
             choices = delay_choices,
             selected = delay_choices[2],
             options = picker_opts(actions = FALSE, search = FALSE),
-            width = 100,
+            width = 80,
             multiple = FALSE
           )),
-          div(class="p-2", shinyWidgets::radioGroupButtons(
+          div(class="pe-1", shinyWidgets::radioGroupButtons(
             ns("delay_stacking"),
             label = NULL,
             choices = c("Stacked bars" = "normal", "Dodged bars" = "none"),
@@ -216,13 +216,13 @@ mod_request_ui <- function(id) {
           ))
         ),
         
-        nav(
+        nav_panel(
           title = shiny::icon("chart-column"),
           value = "chart",
           highcharter::highchartOutput(ns("delay"))
         ),
         
-        nav(
+        nav_panel(
           title = shiny::icon("table"),
           value = "table",
           gt::gt_output(ns("delay_tbl"))
@@ -230,19 +230,25 @@ mod_request_ui <- function(id) {
       )
     ),
     
+    # Request timeline ==============================================
     card(
       class = "my-3",
       card_header(
         class = "d-flex mb-0 align-items-center",
-        card_title(tagList("Request Timeline", tags$small(" (select one)"))),
-        div(class="p-2", shinyWidgets::pickerInput(
+        tags$span(
+          class = "pe-2",
+          bsicons::bs_icon("calendar-week"),
+          "Request Timeline",
+          tags$small(" (select one)")
+        ),
+        shinyWidgets::pickerInput(
           inputId = ns("demand"),
           label = NULL,
           choices = "",
           width = 150,
           options = picker_opts(search = TRUE),
           multiple = FALSE
-        ))
+        )
       ),
       card_body(
         timevis::timevisOutput(ns("timevis"))
@@ -259,22 +265,6 @@ mod_request_server <- function(id) {
     output$geo_select <- renderPrint({
       input$geo
     })
-    
-    # ==========================================================================
-    # PUSHBAR SETUP
-    # ==========================================================================
-    # pushbar::setup_pushbar()
-    # observeEvent(input$open, {
-    #   if (input$open == 1) {
-    #     pushbar::pushbar_open(id = ns("filters"))
-    #   } else if (input$filters_pushbar_opened) {
-    #     pushbar::pushbar_close()
-    #   } else {
-    #     pushbar::pushbar_open(id = ns("filters"))
-    #   }
-    # })
-    # observeEvent(input$go2, { pushbar::pushbar_close() })
-    # observeEvent(input$close, { pushbar::pushbar_close() })
 
     # ==========================================================================
     # OBSERVERS
@@ -284,7 +274,7 @@ mod_request_server <- function(id) {
       shinyjs::reset("resetable_filters")
     })
     
-        observeEvent(input$var, {
+    observeEvent(input$var, {
       cond <- (input$var == "Doses")
       shinyjs::toggle("dose", condition = cond, anim = TRUE, animType = "fade")
     })
@@ -324,10 +314,11 @@ mod_request_server <- function(id) {
     })
 
     output$map_title <- renderUI({
-      card_title(tagList(
+      tags$span(
+        class = "pe-2",
         shiny::icon("earth-africa"),
         stringr::str_replace(var_lab(), "Number", "Map")
-      ))
+      )
     })
     
     # ==========================================================================
@@ -369,7 +360,7 @@ mod_request_server <- function(id) {
       }
       
       return(df)
-    }) %>% bindEvent(input$go1, input$go2, ignoreInit = FALSE, ignoreNULL = FALSE)
+    }) %>% bindEvent(input$go, ignoreInit = FALSE, ignoreNULL = FALSE)
     
     # ==========================================================================
     # VALUE BOXES
