@@ -829,12 +829,6 @@ mod_request_server <- function(id) {
     # DELAYS
     # ==========================================================================
     
-    # observe({
-    #   cond <- (input$delay_tabs == "chart")
-    #   shinyjs::toggle("delay_stacking", condition = cond, anim = TRUE, animType = "fade")
-    #   shinyjs::toggle("delay_log", condition = cond, anim = TRUE, animType = "fade")
-    # })
-    
     delay_params <- reactive({
       dplyr::filter(delay_vars, var == input$delay_var)
     })
@@ -890,7 +884,6 @@ mod_request_server <- function(id) {
       df_hc <- df_delay %>% 
         drop_na(delay) %>% 
         count(delay)
-      # mutate(!!delay_group := factor(!!delay_group, levels = grouping_levels) %>% forcats::fct_explicit_na("Unknown"))
       
       hchart(df_hc, "column", hcaes(delay, n), name = "Days") %>%
         hc_chart(zoomType = "x") %>%
