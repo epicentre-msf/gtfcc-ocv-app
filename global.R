@@ -43,7 +43,6 @@ q_range <- get_q_range(c(
   df_shipment$s_date_delivery,
   df_round$cr_date_round_start
 ))
-# q_range_delivery <- get_q_range(df_shipment$date_delivery)
 
  disconnected <- sever::sever_default(
   title = "Disconnected",
