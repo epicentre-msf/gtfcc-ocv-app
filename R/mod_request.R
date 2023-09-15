@@ -1,7 +1,6 @@
 
 mod_request_ui <- function(id) {
   ns <- NS(id)
-  delay_choices <- delay_choices(app_data$max_shipments, app_data$max_rounds)
   
   bslib::layout_sidebar(
     fillable = FALSE,
@@ -15,8 +14,7 @@ mod_request_ui <- function(id) {
           selected = c(min(q_range), max(q_range)),
           grid = FALSE,
           animate = FALSE,
-          width = "95%",
-          
+          width = "95%"
         ),
         shinyWidgets::pickerInput(
           inputId = ns("region"),
@@ -174,8 +172,41 @@ mod_request_ui <- function(id) {
             width = 150,
             multiple = FALSE
           ))
+
+          # class = "d-flex justify-content-between align-items-center",
+          # tags$span(
+          #   shiny::icon("chart-column"),
+          #   "Time-series",
+          #   bslib::tooltip(
+          #     bs_icon("info-circle"),
+          #     "Click the gear icon on the right for chart options."
+          #   )
+          # ),
+          # popover(
+          #   bs_icon("gear"),
+          #   title = "Time-series inputs",
+          #   placement = "left",
+          #   shinyWidgets::radioGroupButtons(
+          #     ns("ts_unit"),
+          #     label = "Time interval",
+          #     choices = c("Year" = "year", "Quarter" = "quarter", "Month" = "month", "Week" = "week"),
+          #     selected = "year",
+          #     size = "sm",
+          #     status = "outline-success"
+          #   ),
+          #   shinyWidgets::pickerInput(
+          #     ns("ts_date"),
+          #     label = "Date variable",
+          #     choices = date_vars[1:2],
+          #     selected = date_vars[1],
+          #     options = picker_opts(actions = FALSE, search = FALSE),
+          #     width = "100%",
+          #     multiple = FALSE
+          #   )
+          # )
         ),
         card_body(
+          padding = 0,
           highcharter::highchartOutput(ns("ts_chart"))
         )
       ),
@@ -183,6 +214,7 @@ mod_request_ui <- function(id) {
       # Delay tabs ==============================================
       navset_card_tab(
         full_screen = TRUE,
+        wrapper = \(...) {bslib::card_body(..., padding = 0)},
         id = ns("delay_tabs"),
         
         title = div(
@@ -196,7 +228,7 @@ mod_request_ui <- function(id) {
             shinyWidgets::pickerInput(
               ns("delay_var"),
               label = NULL,
-              choices = delay_vars,
+              choices = purrr::set_names(delay_vars$var, delay_vars$lab),
               options = picker_opts(actions = FALSE, search = FALSE),
               width = 150,
               multiple = FALSE
@@ -230,20 +262,26 @@ mod_request_ui <- function(id) {
           #   status = "outline-success"
           # ))
         ),
+
+        nav_panel(
+          title = shiny::icon("chart-line"),
+          value = "boxplot",
+          highcharter::highchartOutput(ns("delay_boxplot"))
+        ),
         
         nav_panel(
           title = shiny::icon("chart-column"),
           value = "chart",
-          highcharter::highchartOutput(ns("delay"))
+          highcharter::highchartOutput(ns("delay_hist"))
         ),
         
         nav_panel(
           title = shiny::icon("table"),
           value = "table",
           gt::gt_output(ns("delay_tbl"))
-        ),
+        )
 
-        card_footer("Delays are calculated on ICG data only.")
+        # footer = card_footer("Delays are calculated on ICG data only.")
       )
     ),
     
@@ -661,8 +699,7 @@ mod_request_server <- function(id) {
       if (input$var == "Requests") {
         df_counts <- df %>% 
           mutate(time_unit = as_date(floor_date(!!ts_date, unit = input$ts_unit))) %>% 
-          # mutate(!!ts_group := forcats::fct_infreq(!!ts_group) %>% forcats::fct_explicit_na("Unknown")) %>%
-          mutate(!!ts_group := factor(!!ts_group, levels = g_levels) %>% forcats::fct_explicit_na("Unknown")) %>%
+          mutate(!!ts_group := factor(!!ts_group, levels = g_levels) %>% forcats::fct_na_value_to_level("Unknown")) %>%
           count(time_unit, !!ts_group) %>% 
           arrange(time_unit)
         
@@ -672,8 +709,7 @@ mod_request_server <- function(id) {
         df_counts <- df %>% 
           mutate(time_unit = as_date(floor_date(!!ts_date, unit = input$ts_unit))) %>% 
           count(time_unit, !!ts_group, wt = !!ts_dose) %>% 
-          mutate(!!ts_group := factor(!!ts_group, levels = g_levels) %>% forcats::fct_explicit_na("Unknown"))
-        # mutate(!!ts_group := forcats::fct_reorder(!!ts_group, n, .desc = T) %>% forcats::fct_explicit_na("Unknown"))
+          mutate(!!ts_group := factor(!!ts_group, levels = g_levels) %>% forcats::fct_na_value_to_level("Unknown"))
       }
       
       return(df_counts)
@@ -745,34 +781,54 @@ mod_request_server <- function(id) {
     #   shinyjs::toggle("delay_stacking", condition = cond, anim = TRUE, animType = "fade")
     #   shinyjs::toggle("delay_log", condition = cond, anim = TRUE, animType = "fade")
     # })
+
+    delay_params <- reactive({
+      dplyr::filter(delay_vars, var == input$delay_var)
+    })
     
     df_delay <- reactive({
 
-      range <- switch(
-        input$delay_var,
-        "r_d" = c("request_1", "decision_1"),
-        "d_s" = c("decision_1", "shipment_1"),
-        "s_r1" = c("shipment_1", "round_1"),
-        "r1_r2" = c("round_1", "round_2"),
-        "r_s" = c("request_1", "shipment_1"),
-        "r_r1" = c("request_1", "round_1")
-      )
-
-      # range <- c(input$date_1, input$date_2)
-      date_1 <- rlang::sym(range[1])
-      date_2 <- rlang::sym(range[2])
+      delay_range <- delay_params()$range[[1]]
+      date_1 <- rlang::sym(delay_range[1])
+      date_2 <- rlang::sym(delay_range[2])
 
       df_delay <- app_data$df_delay %>%
-        filter(r_mechanism == "ICG") %>% 
+        filter(r_mechanism == "ICG", event %in% delay_range) %>% 
         # filter to requests in pre-filtered df_data
         semi_join(df_data(), by = "r_demand_id") %>% 
         select(r_demand_id, r_mechanism, r_status, event, date) %>% 
-        filter(event %in% range) %>% 
         pivot_wider(names_from = "event", values_from = "date") %>% 
         mutate(delay = as.numeric({{ date_2 }} - {{ date_1 }}))
     })
+
+    output$delay_boxplot <- renderHighchart({
+
+      delay_range <- delay_params()$range[[1]]
+      date_1 <- rlang::sym(delay_range[1])
+      expected_days <- delay_params()$expected_days
+
+      df_scatter <- df_delay() %>%
+        drop_na(!!date_1) %>%
+        mutate(year = lubridate::year(!!date_1))
+      
+      df_boxplot <- data_to_boxplot(df_scatter, delay, year, name = "Delay (days)", showInLegend = FALSE)
+      
+      highchart() %>%
+        hc_xAxis(type = "category", title = list(text = "Year")) %>%
+        hc_yAxis(
+          title = list(text = "Delay (days)"),
+          plotLines = list(
+            list(
+              color = "red", zIndex = 1, value = expected_days,
+              label = list(text = paste("Expected", expected_days, "days"), verticalAlign = "bottom", textAlign = "left")
+            )
+          )
+        ) %>%
+        hc_add_series_list(df_boxplot) %>%
+        hc_caption(text = "Delays are calculated on ICG data only")
+    })
     
-    output$delay <- renderHighchart({
+    output$delay_hist <- renderHighchart({
       
       df_delay <- df_delay()
       delay_group <- rlang::sym(input$group)
