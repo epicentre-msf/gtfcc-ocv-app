@@ -26,7 +26,7 @@ WARNING <- "#d39234"
 
 # local disk cache
 shiny::shinyOptions(cache = cachem::cache_disk(here::here(".cache")))
-
+ 
 # week starts monday
 options("lubridate.week.start" = 1)
 

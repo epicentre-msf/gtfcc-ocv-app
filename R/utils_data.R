@@ -123,3 +123,126 @@ get_delay_df <- function(df_timeline) {
     ungroup() %>% 
     select(r_demand_id, event, date = start) 
 }
+
+
+# Map-Chart functions -----------------------------------------------------
+
+#function to prepare the data
+
+df_hc_bar <- function(df_data, 
+                      request_dose, 
+                      group_var, 
+                      dose_type ) {
+  
+  if(request_dose == "Doses") {
+    
+    df <- df_data %>% 
+      
+      group_by(r_country, group = {{group_var}}) %>% 
+      
+      summarise(n = sum( {{dose_type}} ) ) %>% 
+      
+      group_by(r_country) %>% 
+      
+      mutate(tot = sum(n, na.rm = TRUE)) %>% 
+      
+      ungroup() %>% 
+      
+      mutate( index = as.numeric(fct_reorder(r_country, desc(tot)) ), 
+              
+              #create a label for the total to be displayed in stacklabels
+              label = if_else(tot >= 1000 & tot <= 99999, paste0(round(tot/1000, digits = 1), "K"),
+                              
+                              if_else(tot >=1000000, paste0(round(tot/1000000, digits = 1), "M"), 
+                                      
+                                      as.character(tot) ))
+              
+      )
+    
+  } else if(request_dose == "Requests") {
+    
+    df <- df_data %>% 
+      
+      count(r_country, 
+            group = {{group_var}}) %>% 
+      
+      group_by(r_country) %>% 
+      
+      mutate(tot = sum(n, na.rm = TRUE)) %>% 
+      
+      ungroup() %>% 
+      
+      mutate(index = as.numeric(fct_reorder(r_country, desc(tot))),
+             
+             #create a label for the total to be displayed in stacklabels
+             label = if_else(tot >= 1000 & tot <= 99999, paste0(round(tot/1000, digits = 1), "K"),
+                             
+                             if_else(tot >=1000000, paste0(round(tot/1000000, digits = 1), "M"), 
+                                     
+                                     as.character(tot) ))
+      )
+  }
+  
+  return(df)
+} 
+
+#function to make the map chart barplot   
+
+hc_bar <- function(hc_bar_dat, request_dose) {
+  
+  hchart(hc_bar_dat, 
+         
+         "column", 
+         
+         hcaes(index, 
+               n, 
+               group = group, 
+               name = r_country)) %>%
+    
+    hc_chart(zoomType = "x") %>%
+    
+    hc_title(text = NULL) %>% 
+    
+    hc_xAxis(
+      title = list(text = "Countries"),
+      type = "category",
+      crosshair = TRUE
+    ) %>%
+    
+    hc_yAxis(title = list(text = paste0("Number of ", request_dose)), 
+             allowDecimals = FALSE, 
+             stackLabels = list(enabled = TRUE, 
+                                align = "center", 
+                                formatter = JS( "function() { 
+                                                if(this.total <= 999){ 
+                                                
+                                                return this.total 
+                                                
+                                                } else if ( this.total >= 1000 &  this.total <= 99999) { return Math.round( this.total/1000) + ' K'
+                                                
+                                                } else { return Math.round( this.total/100000) + ' M' }
+                                                
+                                                }" ) )
+    ) %>%
+    
+    hc_plotOptions(column = list(stacking = "normal")) %>%
+    
+    hc_tooltip(
+      
+      shared = TRUE,
+      
+      pointFormat = '<span style="color:{point.color}">\u25CF</span> {series.name}: <b>{point.y} ({point.percentage:.1f}%)</b><br/>'
+      
+    ) %>%
+    
+    hc_legend(
+      title = list(text = ""),
+      layout = "vertical",
+      align = "right",
+      verticalAlign = "top",
+      x = -10,
+      y = 40
+    ) %>% 
+    
+    my_hc_export()
+}
