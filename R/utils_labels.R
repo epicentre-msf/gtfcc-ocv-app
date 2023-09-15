@@ -15,6 +15,16 @@ date_vars <- c(
   "Date of delivery" = "s_date_delivery"
 )
 
+delay_vars <- tibble::tribble(
+  ~lab, ~var, ~range, ~expected_days, 
+  "Request -> Decision", "r_d", c("request_1", "decision_1"), 3,
+  "Decision -> 1st Shipment", "d_s",  c("decision_1", "shipment_1"), 7,
+  "1st Shipment -> Round 1", "s_r1",  c("shipment_1", "round_1"), 10,
+  "Round 1 -> Round 2", "r1_r2",  c("round_1", "round_2"), NA_real_,
+  "Request -> 1st Shipment", "r_s",  c("request_1", "shipment_1"), 10,
+  "Request -> Round 1", "r_r1",  c("request_1", "round_1"), 20
+)
+
 grouping_levels <- c("GTFCC", "ICG", "Loan", "Approved", "Not approved", "Pending", "Cancelled")
 
 set_pal <- function(df, var) {
