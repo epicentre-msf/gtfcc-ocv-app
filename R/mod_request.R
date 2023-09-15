@@ -860,7 +860,7 @@ mod_request_server <- function(id) {
       date_1 <- rlang::sym(delay_range[1])
       expected_days <- delay_params()$expected_days
       
-      df_scatter <- df_delay() %>%
+      df_boxplot <- df_delay() %>%
         drop_na(!!date_1) %>%
         mutate(year = lubridate::year(!!date_1)) %>% 
         data_to_boxplot(delay, year, name = "Delay (days)", showInLegend = FALSE)
