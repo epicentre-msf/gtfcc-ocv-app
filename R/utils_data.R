@@ -148,7 +148,16 @@ df_hc_bar <- function(df_data,
       
       ungroup() %>% 
       
-      mutate( index = as.numeric(fct_reorder(r_country, desc(tot)) ))
+      mutate( index = as.numeric(fct_reorder(r_country, desc(tot)) ), 
+              
+              #create a label for the total to be displayed in stacklabels
+              label = if_else(tot >= 1000 & tot <= 99999, paste0(round(tot/1000, digits = 1), "K"),
+                              
+                              if_else(tot >=1000000, paste0(round(tot/1000000, digits = 1), "M"), 
+                                      
+                                      as.character(tot) ))
+              
+      )
     
   } else if(request_dose == "Requests") {
     
@@ -163,16 +172,21 @@ df_hc_bar <- function(df_data,
       
       ungroup() %>% 
       
-      mutate(index = as.numeric(fct_reorder(r_country, desc(tot))))
+      mutate(index = as.numeric(fct_reorder(r_country, desc(tot))),
+             
+             #create a label for the total to be displayed in stacklabels
+             label = if_else(tot >= 1000 & tot <= 99999, paste0(round(tot/1000, digits = 1), "K"),
+                             
+                             if_else(tot >=1000000, paste0(round(tot/1000000, digits = 1), "M"), 
+                                     
+                                     as.character(tot) ))
+      )
   }
   
   return(df)
 } 
 
 #function to make the map chart barplot   
-
-# - add percentages in tooltip 
-# - add totals on top of bars 
 
 hc_bar <- function(hc_bar_dat, request_dose) {
   
@@ -189,15 +203,38 @@ hc_bar <- function(hc_bar_dat, request_dose) {
     
     hc_title(text = NULL) %>% 
     
-    #hc_colors(hc_pal) %>% 
     hc_xAxis(
       title = list(text = "Countries"),
       type = "category",
       crosshair = TRUE
     ) %>%
-    hc_yAxis(title = list(text = paste0("Number of ", request_dose)), allowDecimals = FALSE) %>%
+    
+    hc_yAxis(title = list(text = paste0("Number of ", request_dose)), 
+             allowDecimals = FALSE, 
+             stackLabels = list(enabled = TRUE, 
+                                align = "center", 
+                                formatter = JS( "function() { 
+                                                if(this.total <= 999){ 
+                                                
+                                                return this.total 
+                                                
+                                                } else if ( this.total >= 1000 &  this.total <= 99999) { return Math.round( this.total/1000) + ' K'
+                                                
+                                                } else { return Math.round( this.total/100000) + ' M' }
+                                                
+                                                }" ) )
+    ) %>%
+    
     hc_plotOptions(column = list(stacking = "normal")) %>%
-    hc_tooltip(shared = TRUE) %>%
+    
+    hc_tooltip(
+      
+      shared = TRUE,
+      
+      pointFormat = '<span style="color:{point.color}">\u25CF</span> {series.name}: <b>{point.y} ({point.percentage:.1f}%)</b><br/>'
+      
+    ) %>%
+    
     hc_legend(
       title = list(text = ""),
       layout = "vertical",
@@ -205,5 +242,7 @@ hc_bar <- function(hc_bar_dat, request_dose) {
       verticalAlign = "top",
       x = -10,
       y = 40
-    ) 
+    ) %>% 
+    
+    my_hc_export()
 }

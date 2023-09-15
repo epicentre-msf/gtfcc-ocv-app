@@ -115,7 +115,7 @@ mod_request_ui <- function(id) {
     navset_card_tab(
       full_screen = TRUE,
       wrapper = \(...) {bslib::card_body(..., padding = 0)},
-
+      
       title = div(
         class = "d-flex justify-content-between align-items-center",
         uiOutput(ns("map_title")),
@@ -126,13 +126,13 @@ mod_request_ui <- function(id) {
           class = "btn-outline-success btn-sm pe-2"
         )
       ),
-
+      
       nav_panel(
         title = shiny::icon("globe-africa"),
         value = "map",
         leaflet::leafletOutput(ns("map"))
       ),
-
+      
       nav_panel(
         title = shiny::icon("chart-column"),
         value = "chart",
@@ -142,7 +142,7 @@ mod_request_ui <- function(id) {
       nav_panel(
         title = shiny::icon("table"),
         value = "table",
-        gt::gt_output(ns("map_tbl"))
+        reactable::reactableOutput(ns("map_tbl"))
       )
     ),
     
@@ -172,7 +172,7 @@ mod_request_ui <- function(id) {
             width = 150,
             multiple = FALSE
           ))
-
+          
           # class = "d-flex justify-content-between align-items-center",
           # tags$span(
           #   shiny::icon("chart-column"),
@@ -262,7 +262,7 @@ mod_request_ui <- function(id) {
           #   status = "outline-success"
           # ))
         ),
-
+        
         nav_panel(
           title = shiny::icon("chart-line"),
           value = "boxplot",
@@ -280,7 +280,7 @@ mod_request_ui <- function(id) {
           value = "table",
           gt::gt_output(ns("delay_tbl"))
         )
-
+        
         # footer = card_footer("Delays are calculated on ICG data only.")
       )
     ),
@@ -320,11 +320,11 @@ mod_request_server <- function(id) {
     output$geo_select <- renderPrint({
       input$geo
     })
-
+    
     # ==========================================================================
     # OBSERVERS
     # ==========================================================================
-
+    
     observeEvent(input$reset, {
       shinyjs::reset("resetable_filters")
     })
@@ -359,7 +359,7 @@ mod_request_server <- function(id) {
         )
       }
     })
-
+    
     var_lab <- reactive({
       lab <- paste("Number of", tolower(input$var))
       if (input$var == "Doses") {
@@ -367,7 +367,7 @@ mod_request_server <- function(id) {
       }
       lab
     })
-
+    
     output$map_title <- renderUI({
       tags$span(
         class = "pe-2",
@@ -599,6 +599,7 @@ mod_request_server <- function(id) {
         # leaflet::leafletProxy("map", session) %>% leaflet::removeShape("highlight")
       }
     })
+    
     df_map <- reactive({
       map_var <- rlang::sym(input$var)
       map_group <- rlang::sym(input$group)
@@ -637,6 +638,7 @@ mod_request_server <- function(id) {
       }
       
       return(df_map)
+      
     })
     
     observe({
@@ -645,7 +647,7 @@ mod_request_server <- function(id) {
         select(any_of(grouping_levels))
       # select(-country, -iso_a3, -lon, -lat, -total)
       pie_width <- 45 * sqrt(df_map$total) / sqrt(max(df_map$total))
-
+      
       mp <- map_pal(chartData)
       
       leaflet::leafletProxy("map", session) %>%
@@ -665,26 +667,50 @@ mod_request_server <- function(id) {
     #make df for the highcarter barplot 
     
     df_map_chart <- reactive({
-    
+      
       map_chart_group <- rlang::sym(input$group)
       map_chart_dose_vars <- rlang::sym(input$dose)
       
       #use function to prepare the data
-      df_hc_bar(df_data = df_data(), 
+      dat <- df_hc_bar(df_data = df_data(), 
                 request_dose = input$var,
                 group_var = !!map_chart_group,  
                 dose_type = !!map_chart_dose_vars ) 
       
-    })
+      #browser()
+      return(dat)
+    }
+  )
     
     #Use the df_hc_bar inside the barplot function
     
-    output$map_chart <- renderHighchart(
+    output$map_chart <- renderHighchart({
       
       hc_bar(hc_bar_dat = df_map_chart(), 
              request_dose = input$var)
       
-      )
+    })
+    
+    # MAP_TBL 
+    
+    output$map_tbl <- reactable::renderReactable({
+      
+      dat <- df_map() %>% 
+        
+        select(-c(iso_a3, lon, lat), 
+               Total = total) %>% 
+        
+        mutate(across( any_of(grouping_levels), 
+                       
+                       ~ if_else(Total > 0,  paste0(.x, " (", round(.x/Total * 100, digits = 1), "%)"), as.character(.x) ) ) ) %>% 
+        
+        arrange(desc(Total)) %>% 
+        
+        reactable::reactable(highlight = TRUE, 
+                             searchable = TRUE, 
+                             compact = TRUE
+        )
+    })
     
     # ==========================================================================
     # TIME-SERIES
@@ -806,17 +832,17 @@ mod_request_server <- function(id) {
     #   shinyjs::toggle("delay_stacking", condition = cond, anim = TRUE, animType = "fade")
     #   shinyjs::toggle("delay_log", condition = cond, anim = TRUE, animType = "fade")
     # })
-
+    
     delay_params <- reactive({
       dplyr::filter(delay_vars, var == input$delay_var)
     })
     
     df_delay <- reactive({
-
+      
       delay_range <- delay_params()$range[[1]]
       date_1 <- rlang::sym(delay_range[1])
       date_2 <- rlang::sym(delay_range[2])
-
+      
       df_delay <- app_data$df_delay %>%
         filter(r_mechanism == "ICG", event %in% delay_range) %>% 
         # filter to requests in pre-filtered df_data
@@ -825,13 +851,13 @@ mod_request_server <- function(id) {
         pivot_wider(names_from = "event", values_from = "date") %>% 
         mutate(delay = as.numeric({{ date_2 }} - {{ date_1 }}))
     })
-
+    
     output$delay_boxplot <- renderHighchart({
-
+      
       delay_range <- delay_params()$range[[1]]
       date_1 <- rlang::sym(delay_range[1])
       expected_days <- delay_params()$expected_days
-
+      
       df_scatter <- df_delay() %>%
         drop_na(!!date_1) %>%
         mutate(year = lubridate::year(!!date_1))
@@ -864,7 +890,7 @@ mod_request_server <- function(id) {
       df_hc <- df_delay %>% 
         drop_na(delay) %>% 
         count(delay)
-        # mutate(!!delay_group := factor(!!delay_group, levels = grouping_levels) %>% forcats::fct_explicit_na("Unknown"))
+      # mutate(!!delay_group := factor(!!delay_group, levels = grouping_levels) %>% forcats::fct_explicit_na("Unknown"))
       
       # hc_pal <- set_pal(df_hc, input$group)
       
