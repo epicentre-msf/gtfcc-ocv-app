@@ -15,11 +15,18 @@ dat <- data_sheets %>%
   purrr::set_names(snakecase::to_snake_case(.)) %>% 
   map(~qxl::qread(path_data, .x))
 
-dat$request <- dat$request %>% 
+dat$request <- dat$request %>%
   mutate(
     r_country = recode(r_country, "Zanzibar" = "Tanzania"),
     iso_a3 = countrycode::countrycode(r_country, origin = "country.name", destination = "iso3c"),
     .after = r_country
+  ) %>%
+  mutate(
+    r_mechanism_type = case_when(
+      r_mechanism %in% c("ICG", "Loan") ~ "Reactive",
+      r_mechanism %in% c("GTFCC") ~ "Preventive"
+    ),
+    .after = r_mechanism_abb
   ) %>% 
   mutate(
     quarter = lubridate::quarter(r_date_receipt, with_year = TRUE) %>% str_replace("\\.", "-Q")
@@ -44,6 +51,7 @@ df_info <- dat$request %>%
     r_status,
     r_context,
     r_mechanism,
+    r_mechanism_type,
     r_agency
   ) %>% 
   left_join(df_vaccine, by = c("r_demand_id" = "s_r_demand_id"))
@@ -63,22 +71,20 @@ df_delay <- df_info %>%
   left_join(get_delay_df(df_timeline), by = "r_demand_id", multiple = "all") %>% 
   drop_na(date)
 
-df_event_max <- df_delay %>% 
-  separate(event, c("event", "index"), sep = "_") %>% 
-  group_by(event) %>% 
-  summarise(max = max(index, na.rm = TRUE), .groups = "drop")
+# df_event_max <- df_delay %>% 
+#   separate(event, c("event", "index"), sep = "_") %>% 
+#   group_by(event) %>% 
+#   summarise(max = max(index, na.rm = TRUE), .groups = "drop")
 
-max_shipments <- df_event_max %>% filter(event == "shipment") %>% pull(max) %>% as.numeric()
-max_rounds <- df_event_max %>% filter(event == "round") %>% pull(max) %>% as.numeric()
+# max_shipments <- df_event_max %>% filter(event == "shipment") %>% pull(max) %>% as.numeric()
+# max_rounds <- df_event_max %>% filter(event == "round") %>% pull(max) %>% as.numeric()
 
 app_data <- c(
   dat,
   tibble::lst(
     df_info,
     df_timevis,
-    df_delay,
-    max_shipments,
-    max_rounds
+    df_delay
   )
 )
 

@@ -5,7 +5,7 @@ delay_choices <- function(max_shipments, max_rounds) {
   c("Request" = "request_1", "Decision" = "decision_1", "Shipments" = list(shipments), "Rounds" = list(rounds))
 }
 
-group_vars <- c("Mechanism" = "r_mechanism", "Status" = "r_status")
+group_vars <- c("Mechanism" = "r_mechanism_type", "Status" = "r_status")
 
 dose_vars <- c("Requested" = "r_dose_request", "Approved" = "r_dose_approve", "Shipped" = "s_dose_ship")
 
@@ -25,10 +25,12 @@ delay_vars <- tibble::tribble(
   "Request -> Round 1", "r_r1",  c("request_1", "round_1"), 20
 )
 
-grouping_levels <- c("GTFCC", "ICG", "Loan", "Approved", "Not approved", "Pending", "Cancelled")
+grouping_levels <- c("Preventive", "Reactive", "GTFCC", "ICG", "Loan", "Approved", "Not approved", "Pending", "Cancelled")
 
 set_pal <- function(df, var) {
   pal <- c(
+    "Preventive" = "#1f77b4",
+    "Reactive" = "#ff7f0e",
     "GTFCC" = "#1f77b4",
     "ICG" = "#ff7f0e",
     "Loan" = "#2ca02c",
@@ -44,6 +46,8 @@ set_pal <- function(df, var) {
 
 map_pal <- function(df) {
   pal <- c(
+    "Preventive" = "#1f77b4",
+    "Reactive" = "#ff7f0e",
     "GTFCC" = "#1f77b4",
     "ICG" = "#ff7f0e",
     "Loan" = "#2ca02c",

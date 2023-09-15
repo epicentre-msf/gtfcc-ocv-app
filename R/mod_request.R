@@ -47,7 +47,7 @@ mod_request_ui <- function(id) {
         shinyWidgets::pickerInput(
           inputId = ns("mechanism"),
           label = "Mechanism",
-          choices = unique(df_request$r_mechanism) %>% na.omit(),
+          choices = unique(df_request$r_mechanism_type) %>% na.omit(),
           options = picker_opts(),
           multiple = TRUE
         ),
@@ -404,7 +404,7 @@ mod_request_server <- function(id) {
       if (length(input$country)) df %<>% filter(r_country %in% input$country)
       if (length(input$status)) df %<>% filter(r_status %in% input$status)
       if (length(input$context)) df %<>% filter(r_context %in% input$context)
-      if (length(input$mechanism)) df %<>% filter(r_mechanism %in% input$mechanism)
+      if (length(input$mechanism)) df %<>% filter(r_mechanism_type %in% input$mechanism)
       if (length(input$agency)) df %<>% filter(r_agency %in% input$agency)
       # if (!is.null(country_select())) df %<>% filter(iso_a3 == country_select())
       if (length(input$vaccine)) {
@@ -690,10 +690,12 @@ mod_request_server <- function(id) {
       ts_group <- rlang::sym(input$group)
       ts_date <- rlang::sym(input$ts_date)
       
-      g_levels <- if (input$group == "r_mechanism") {
-        grouping_levels[1:3]
+      g_levels <- if (input$group == "r_mechanism_type") {
+        grouping_levels[1:2]
+      } else if (input$group == "r_mechanism") {
+        grouping_levels[3:5]
       } else if (input$group == "r_status") {
-        grouping_levels[4:7]
+        grouping_levels[6:9]
       }
       
       if (input$var == "Requests") {
@@ -775,12 +777,6 @@ mod_request_server <- function(id) {
     # ==========================================================================
     # DELAYS
     # ==========================================================================
-    
-    # observe({
-    #   cond <- (input$delay_tabs == "chart")
-    #   shinyjs::toggle("delay_stacking", condition = cond, anim = TRUE, animType = "fade")
-    #   shinyjs::toggle("delay_log", condition = cond, anim = TRUE, animType = "fade")
-    # })
 
     delay_params <- reactive({
       dplyr::filter(delay_vars, var == input$delay_var)
@@ -796,7 +792,7 @@ mod_request_server <- function(id) {
         filter(r_mechanism == "ICG", event %in% delay_range) %>% 
         # filter to requests in pre-filtered df_data
         semi_join(df_data(), by = "r_demand_id") %>% 
-        select(r_demand_id, r_mechanism, r_status, event, date) %>% 
+        select(r_demand_id, r_mechanism, r_mechanism_type, r_status, event, date) %>% 
         pivot_wider(names_from = "event", values_from = "date") %>% 
         mutate(delay = as.numeric({{ date_2 }} - {{ date_1 }}))
     })
@@ -807,11 +803,10 @@ mod_request_server <- function(id) {
       date_1 <- rlang::sym(delay_range[1])
       expected_days <- delay_params()$expected_days
 
-      df_scatter <- df_delay() %>%
+      df_boxplot <- df_delay() %>%
         drop_na(!!date_1) %>%
-        mutate(year = lubridate::year(!!date_1))
-      
-      df_boxplot <- data_to_boxplot(df_scatter, delay, year, name = "Delay (days)", showInLegend = FALSE)
+        mutate(year = lubridate::year(!!date_1)) %>% 
+        data_to_boxplot(delay, year, name = "Delay (days)", showInLegend = FALSE)
       
       highchart() %>%
         hc_xAxis(type = "category", title = list(text = "Year")) %>%
@@ -825,33 +820,23 @@ mod_request_server <- function(id) {
           )
         ) %>%
         hc_add_series_list(df_boxplot) %>%
-        hc_caption(text = "Delays are calculated on ICG data only")
+        hc_caption(text = "Delays are calculated on ICG data only") %>%
+        my_hc_export()
     })
     
     output$delay_hist <- renderHighchart({
       
       df_delay <- df_delay()
-      delay_group <- rlang::sym(input$group)
-      delay_mean <- mean(df_delay$delay, na.rm = TRUE)
-      delay_median <- median(df_delay$delay, na.rm = TRUE)
+      expected_days <- delay_params()$expected_days
       n_missing <- sum(is.na(df_delay$delay))
       
       df_hc <- df_delay %>% 
         drop_na(delay) %>% 
         count(delay)
-        # mutate(!!delay_group := factor(!!delay_group, levels = grouping_levels) %>% forcats::fct_explicit_na("Unknown"))
       
-      # hc_pal <- set_pal(df_hc, input$group)
-      
-      # stacking <- input$delay_stacking
-      # if (input$delay_stacking == "none") {
-      #   stacking <- NULL
-      # }
-      
-      hchart(df_hc, "column", hcaes(delay, n)) %>%
+      hchart(df_hc, "column", hcaes(delay, n), name = "Days") %>%
         hc_chart(zoomType = "x") %>%
         hc_title(text = NULL) %>%
-        # hc_colors(hc_pal) %>% 
         hc_xAxis(
           title = list(text = "Days"),
           allowDecimals = FALSE,
@@ -859,12 +844,8 @@ mod_request_server <- function(id) {
           min = 0,
           plotLines = list(
             list(
-              color = "red", zIndex = 1, value = delay_mean,
-              label = list(text = "Mean", verticalAlign = "top", textAlign = "left")
-            ),
-            list(
-              color = "red", zIndex = 1, value = delay_median,
-              label = list(text = "Median", verticalAlign = "top", textAlign = "left")
+              color = "red", zIndex = 1, value = expected_days,
+              label = list(text = paste("Expected", expected_days, "days"), verticalAlign = "top", textAlign = "left")
             )
           )
         ) %>%
@@ -879,6 +860,7 @@ mod_request_server <- function(id) {
           x = -10,
           y = 40
         ) %>% 
+        hc_caption(text = "Delays are calculated on ICG data only") %>% 
         hc_credits(enabled = TRUE, text = glue::glue("Unknown delay time for {scales::number(n_missing)} cases")) %>%
         my_hc_export()
     })
@@ -886,7 +868,7 @@ mod_request_server <- function(id) {
     output$delay_tbl <- gt::render_gt({
       df <- df_delay()
       group <- input$group
-      group_lab <- dplyr::if_else(group == "r_mechanism", "Mechanism", "Status")
+      group_lab <- dplyr::if_else(group == "r_mechanism_type", "Mechanism", "Status")
       
       df %>% 
         dplyr::select(.data[[group]], delay) %>% 
