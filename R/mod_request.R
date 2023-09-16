@@ -3,6 +3,7 @@ mod_request_ui <- function(id) {
   ns <- NS(id)
 
   bslib::layout_sidebar(
+    border = FALSE,
     fillable = FALSE,
     sidebar = sidebar(
       div(
@@ -218,15 +219,25 @@ mod_request_ui <- function(id) {
             class = "pe-2",
             tagList(shiny::icon("clock"), "Delays")
           ),
-          div(
-            # class = "pe-2",
-            shinyWidgets::pickerInput(
-              ns("delay_var"),
+          div(class = "pe-2", shinyWidgets::pickerInput(
+            ns("delay_var"),
+            label = NULL,
+            choices = purrr::set_names(delay_vars$var, delay_vars$lab),
+            options = picker_opts(actions = FALSE, search = FALSE),
+            width = 150,
+            multiple = FALSE
+          )),
+          popover(
+            bs_icon("gear"),
+            title = "Time interval",
+            placement = "left",
+            shinyWidgets::radioGroupButtons(
+              ns("delay_unit"),
               label = NULL,
-              choices = purrr::set_names(delay_vars$var, delay_vars$lab),
-              options = picker_opts(actions = FALSE, search = FALSE),
-              width = 150,
-              multiple = FALSE
+              choices = c("Year" = "year", "Quarter" = "quarter", "Month" = "month", "Week" = "week"),
+              selected = "year",
+              size = "sm",
+              status = "outline-success"
             )
           )
 
@@ -724,7 +735,7 @@ mod_request_server <- function(id) {
       if (input$var == "Doses" & input$ts_date == "s_date_delivery") {
         df <- df_shipment %>%
           inner_join(
-            df_data() %>% distinct(r_demand_id, r_mechanism, r_status),
+            df_data() %>% distinct(r_demand_id, r_mechanism, r_mechanism_type, r_status),
             by = c("s_r_demand_id" = "r_demand_id")
           )
       } else {
@@ -835,7 +846,7 @@ mod_request_server <- function(id) {
       date_2 <- rlang::sym(delay_range[2])
 
       df_delay <- app_data$df_delay %>%
-        filter(r_mechanism == "ICG", event %in% delay_range) %>%
+        filter(r_mechanism_type == "Reactive", event %in% delay_range) %>%
         # filter to requests in pre-filtered df_data
         semi_join(df_data(), by = "r_demand_id") %>%
         select(r_demand_id, r_mechanism, r_mechanism_type, r_status, event, date) %>%
@@ -849,25 +860,61 @@ mod_request_server <- function(id) {
       delay_range <- delay_params()$range[[1]]
       date_1 <- rlang::sym(delay_range[1])
       expected_days <- delay_params()$expected_days
+      delay_unit <- input$delay_unit
 
       df_boxplot <- df_delay() %>%
         drop_na(!!date_1) %>%
-        mutate(year = lubridate::year(!!date_1)) %>%
-        data_to_boxplot(delay, year, name = "Delay (days)", showInLegend = FALSE)
+        mutate(time_unit = as_date(floor_date(!!date_1, unit = delay_unit)))
+      
+      complete_by <- if_else(
+        delay_unit == "quarter",
+        "3 months",
+        input$delay_unit
+      )
+
+      frmt_time_unit <- switch(
+        delay_unit,
+        "year" = function(x) format(x, "%Y") %>% factor(),
+        "quarter" = function(x) quarter(x, with_year = TRUE) %>% str_replace("\\.", "-Q") %>% factor(),
+        "month" = function(x) format(x, "%Y-%m") %>% factor(),
+        "week" = function(x) format(x, "%Y-W%V") %>% factor()
+      )
+
+      tu_range <- range(df_boxplot$time_unit)
+      complete_tu <- seq.Date(tu_range[1], tu_range[2], by = complete_by)
+
+      df_boxplot %<>%
+        arrange(time_unit) %>%
+        complete(time_unit = complete_tu) %>% # , fill = list(delay = NA)
+        mutate(time_unit = frmt_time_unit(time_unit))
+      
+      hc_boxplot <- data_to_boxplot(
+        df_boxplot,
+        delay,
+        time_unit,
+        name = "Delay (days)",
+        showInLegend = FALSE
+      )
 
       highchart() %>%
-        hc_xAxis(type = "category", title = list(text = "Year")) %>%
+        hc_chart(zoomType = "x") %>%
+        hc_xAxis(
+          type = "category",
+          crosshair = TRUE,
+          title = list(text = stringr::str_to_title(input$delay_unit))
+        ) %>%
         hc_yAxis(
           title = list(text = "Delay (days)"),
           plotLines = list(
             list(
-              color = "red", zIndex = 1, value = expected_days,
+              color = "red", zIndex = 10, value = expected_days,
               label = list(text = paste("Expected", expected_days, "days"), verticalAlign = "bottom", textAlign = "left")
             )
           )
         ) %>%
-        hc_add_series_list(df_boxplot) %>%
-        hc_caption(text = "Delays are calculated on ICG data only") %>%
+        hc_add_series_list(hc_boxplot) %>%
+        hc_tooltip(shared = TRUE) %>% 
+        hc_caption(text = "Calculated for reactive vaccination campaigns only") %>%
         my_hc_export()
     })
 
@@ -891,7 +938,7 @@ mod_request_server <- function(id) {
           min = 0,
           plotLines = list(
             list(
-              color = "red", zIndex = 1, value = expected_days,
+              color = "red", zIndex = 10, value = expected_days,
               label = list(text = paste("Expected", expected_days, "days"), verticalAlign = "top", textAlign = "left")
             )
           )
@@ -907,7 +954,7 @@ mod_request_server <- function(id) {
           x = -10,
           y = 40
         ) %>%
-        hc_caption(text = "Delays are calculated on ICG data only") %>%
+        hc_caption(text = "Calculated for reactive vaccination campaigns only") %>%
         hc_credits(enabled = TRUE, text = glue::glue("Unknown delay time for {scales::number(n_missing)} cases")) %>%
         my_hc_export()
     })
@@ -933,7 +980,7 @@ mod_request_server <- function(id) {
           )
         ) %>%
         gtsummary::modify_header(update = gtsummary::all_stat_cols() ~ "**{level}**") %>%
-        gtsummary::add_overall(col_label = glue::glue("**{group_lab}**")) %>%
+        # gtsummary::add_overall(col_label = glue::glue("**{group_lab}**")) %>%
         gtsummary::italicize_levels() %>%
         gtsummary::modify_footnote(update = gtsummary::everything() ~ NA) %>%
         gtsummary::as_gt()
