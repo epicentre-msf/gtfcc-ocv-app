@@ -466,8 +466,8 @@ mod_request_server <- function(id) {
         value = r,
         tags$p(glue::glue("{a} ({ap}) approved")),
         showcase = bsicons::bs_icon("card-checklist"),
-        theme_color = "primary",
-        showcase_layout = showcase_top_right()
+        theme = "primary"
+        # showcase_layout = showcase_top_right()
       )
       # doses
       r <- fmt_n_dose(df_summary()$n_dose_requested)
@@ -478,8 +478,8 @@ mod_request_server <- function(id) {
         value = r,
         tags$p(glue::glue("{a} ({ap}) approved")),
         showcase = bsicons::bs_icon("box-seam"),
-        theme_color = "info",
-        showcase_layout = showcase_top_right()
+        theme = "info"
+        # showcase_layout = showcase_top_right()
       )
       # doses shipped
       s <- fmt_n_dose(df_summary()$n_dose_shipped)
@@ -489,9 +489,9 @@ mod_request_server <- function(id) {
         title = "Doses shipped",
         value = s,
         tags$p(glue::glue("{s_icg} ({s_icg_p}) shipped with ICG")),
-        theme_color = "success",
-        showcase = bsicons::bs_icon("airplane"),
-        showcase_layout = showcase_top_right()
+        theme = "success",
+        showcase = bsicons::bs_icon("airplane")
+        # showcase_layout = showcase_top_right()
       )
       # n countries
       n <- scales::number(df_summary()$n_countries)
@@ -501,9 +501,9 @@ mod_request_server <- function(id) {
         title = "Countries",
         value = n,
         tags$p(glue::glue("{na} ({pcnt}) with an approved request")),
-        theme_color = "warning",
-        showcase = bsicons::bs_icon("globe"),
-        showcase_layout = showcase_top_right()
+        theme = "warning",
+        showcase = bsicons::bs_icon("globe")
+        # showcase_layout = showcase_top_right()
       )
       # time decision
       days <- as.character(glue::glue("{df_summary()$time_decision_av} days"))
@@ -512,9 +512,9 @@ mod_request_server <- function(id) {
         title = "Average decision time",
         value = days,
         tags$p(glue::glue("Min: {df_summary()$time_decision_min} days - Max: {df_summary()$time_decision_max} days")),
-        theme_color = "danger",
-        showcase = bsicons::bs_icon("clock"),
-        showcase_layout = showcase_top_right()
+        theme = "danger",
+        showcase = bsicons::bs_icon("clock")
+        # showcase_layout = showcase_top_right()
       )
 
       layout_column_wrap(

@@ -24,6 +24,7 @@ ui <- tagList(
     fillable = TRUE,
     collapsible = TRUE,
     inverse = FALSE,
+    padding = 0,
     theme = bs_theme(
       base_font = font_google(
         app_font, 
@@ -45,6 +46,10 @@ ui <- tagList(
       title = "Timeline", value = "timevis", icon = icon("chart-column"),
       mod_timevis_ui("timevis")
     ),
+    nav_panel(
+      title = "Country Profile", value = "country", icon = icon("globe-africa"),
+      mod_country_profile_ui("country")
+    ),
     nav_spacer(),
     nav_item(
       tags$a(
@@ -58,7 +63,7 @@ ui <- tagList(
       tags$a(
         tags$img(
           src = "gtfcc-logo.jpg",
-          height = "40px"
+          height = "35px"
         ),
         class = "p-0",
         href = "https://www.gtfcc.org/",
