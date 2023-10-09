@@ -6,20 +6,20 @@ mod_country_profile_ui <- function(id) {
       shinyWidgets::pickerInput(
         inputId = ns("country"),
         label = "Country",
-        choices = na.omit(""),
-        # options = picker_opts(search = TRUE),
-        multiple = TRUE
+        choices = c("Cameroon" = "CMR"), #na.omit(""),
+        # options = picker_opts(search = TRUE)
       ),
-      shinyWidgets::sliderTextInput(
+      
+      shiny::sliderInput(
         inputId = ns("time_period"),
         label = "Time period",
-        choices = "",
-        # selected = c(min(q_range), max(q_range)),
-        grid = FALSE,
-        animate = FALSE,
+        min = as.Date("2021-07-03"), 
+        max = as.Date("2023-02-01"),
+        value = c( as.Date("2021-07-03") , as.Date("2023-02-01")),
         width = "100%"
-      ),
-    ),
+        
+      ) ), 
+    
     bslib::layout_column_wrap(
       width = 1/5,
       fill = FALSE,
@@ -37,20 +37,20 @@ mod_country_profile_ui <- function(id) {
       ),
       bslib::value_box(
         title = "Doses", 
-        value = textOutput(ns("n_doses")),
-        textOutput(ns("doses_info")),
+        value = uiOutput(ns("n_doses")),
+        uiOutput(ns("doses_info")),
         theme = "primary"
       ),
       bslib::value_box(
         title = "Targeted areas", 
-        value = textOutput(ns("n_areas")),
-        textOutput(ns("areas_info")),
+        value = uiOutput(ns("n_areas")),
+        uiOutput(ns("areas_info")),
         theme = "primary"
       ),
       bslib::value_box(
         title = "Latest Campaign", 
-        value = textOutput(ns("latest_campaign")),
-        textOutput(ns("latest_campaign_info")),
+        value = uiOutput(ns("latest_campaign")),
+        uiOutput(ns("latest_campaign_info")),
         theme = "primary"
       )
     ),
@@ -100,56 +100,98 @@ mod_country_profile_server <- function(id, df_country_profile) {
     prep_dat <- prep_data(df_country_profile)
     
     #filter the data for the selected country and date range
-    
     country_df <- reactive({ prep_dat %>% 
         
-        filter(country_name == input$country,
+        filter(country_code == input$country,
                
                between(d1_date_start, as.Date(input$time_period[1]), as.Date(input$time_period[2]) )
         ) })
     
-    #summarise all data for the country_df
-    country_summ <- reactive({ get_country_summ(country_df()) })
-    
     #summarise the campaigns for the country df
     camp_summ <-  reactive ({ get_camp_summ(country_df()) })
     
+    #get the latest campaign
+    latest_camp <- reactive( { 
+      
+      camp_summ() %>% 
+        
+        filter(d2_date_end == max(d2_date_end) ) })
+    
+    #summarise all data for the country_df
+    country_summ <- reactive({ get_country_summ(camp_summ()) })
+    
     #get unique admin targeted for the country_df
     unique_admin <- reactive({ get_unique_admin(country_df()) } )
+    
     
     # VALUE BOXES ==============================
     output$n_approved <- renderText({
       
     })
+    
     output$approved_info <- renderText({
       
     })
     
     output$n_campaigns <- renderText({
       
+      scales::number(country_summ()$n_campaigns )
+      
+      
     })
+    
     output$campaigns_info <- renderText({
+      
+      glue::glue("{country_summ()$n_reactive}\n ({country_summ()$pct_reactive} %) reactive campaigns")
       
     })
     
     output$n_doses <- renderText({
       
-    })
-    output$doses_info <- renderText({
+      glue::glue("{fmt_n_dose(country_summ()$n_d1 + country_summ()$n_d2 )} administered doses")
       
     })
     
-    output$n_areas <- renderText({
+    output$doses_info <- renderUI({
       
-    })
-    output$areas_info <- renderText({
+      tagList( p(glue::glue("{fmt_n_dose(country_summ()$n_d1)} first doses")),
+               p(glue::glue("{fmt_n_dose(country_summ()$n_d2)} second doses")) )
       
     })
     
-    output$latest_campaign <- renderText({
+    output$n_areas <- renderUI({
+      
+      tagList( p(glue::glue("{unique_admin()$unique_adm1} admin 1 levels")),
+               p(glue::glue("{unique_admin()$unique_adm2} admin 2 levels")), 
+               p(glue::glue("{unique_admin()$unique_adm3} admin 3 levels")))
       
     })
-    output$latest_campaign_info <- renderText({
+    
+    output$areas_info <- renderUI({
+      
+      
+    })
+    
+    output$latest_campaign <- renderUI({
+      
+      
+      tagList( p(glue::glue("from {latest_camp()$d1_date_start} to {latest_camp()$d2_date_end}")) )
+      
+    })
+    
+    output$latest_campaign_info <- renderUI({
+      
+      tagList( 
+        p(glue::glue("{latest_camp()$campaign_type} campaign")),
+        p(glue::glue("targeting {latest_camp()$target_type }", " ({fmt_n_dose(latest_camp()$target_pop)} people)")),
+        p(glue::glue("{latest_camp()$cov_d1}% first dose coverage")), 
+        p(glue::glue("{latest_camp()$cov_d2}% second dose coverage")), 
+        
+        p(glue::glue("{latest_camp()$drop_out}% dropout rate"))
+      )
+      
+      
+      
       
     })
     
@@ -272,9 +314,12 @@ get_camp_summ <- function(country_df) {
       target_type = paste0(unique(target_type), collapse = ", "),
       target_pop = sum(target_pop),
       n_d1 = sum(d1_dose_adm), 
-      cov_d1 = n_d1/target_pop, 
+      cov_d1 = round(digits = 2, n_d1/target_pop),
       n_d2 = sum(d2_dose_adm), 
-      cov_d2 = n_d2/target_pop)
+      cov_d2 = round(digits = 2, n_d2/target_pop), 
+      drop_out = round(digits = 2, (n_d2 - n_d1) / n_d1 * 100)
+    ) 
+  
   
   return(camp_sum)
 }
@@ -289,9 +334,9 @@ get_country_summ <- function(camp_sum_df) {
     summarise(
       n_campaigns = n(),
       n_reactive = sum(campaign_type == "Reactive"), 
-      pct_reactive = round(digits = 0, n_reactive/n_campaign * 100),
+      pct_reactive = round(digits = 0, n_reactive/n_campaigns * 100),
       n_preventive = sum(campaign_type == "Preventive"),
-      pct_preventive = round(digits = 0, n_preventive/n_campaign * 100),
+      pct_preventive = round(digits = 0, n_preventive/n_campaigns * 100),
       target_pop = sum(target_pop),
       n_d1 = sum(n_d1), 
       cov_d1 = n_d1/target_pop, 
@@ -300,7 +345,6 @@ get_country_summ <- function(camp_sum_df) {
   
   return(coun_sum)
 }
-
 
 # Function to get unique number of admin area targetted per country 
 get_unique_admin <- function(country_df) {
@@ -311,4 +355,3 @@ get_unique_admin <- function(country_df) {
               unique_adm2 = n_distinct(adm2_name), 
               unique_adm3 = n_distinct(adm3_name)
     ) }
-

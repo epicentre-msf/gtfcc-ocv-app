@@ -44,6 +44,7 @@ df_vaccine <- dat$shipment %>%
   summarise(s_vaccine = paste(s_vaccine, collapse = ", "), .groups = "drop")
 
 df_info <- dat$request %>% 
+  
   distinct(
     r_demand_id,
     r_who_region,
