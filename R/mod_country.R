@@ -23,31 +23,31 @@ mod_country_profile_ui <- function(id) {
     bslib::layout_column_wrap(
       width = 1/5,
       fill = FALSE,
-      value_box(
+      bslib::value_box(
         title = "Requests approved", 
         value = textOutput(ns("n_approved")),
         textOutput(ns("approved_info")),
         theme = "primary"
       ),
-      value_box(
+      bslib::value_box(
         title = "Campaigns", 
         value = textOutput(ns("n_campaigns")),
         textOutput(ns("campaigns_info")),
         theme = "primary"
       ),
-      value_box(
+      bslib::value_box(
         title = "Doses", 
         value = textOutput(ns("n_doses")),
         textOutput(ns("doses_info")),
         theme = "primary"
       ),
-      value_box(
+      bslib::value_box(
         title = "Targeted areas", 
         value = textOutput(ns("n_areas")),
         textOutput(ns("areas_info")),
         theme = "primary"
       ),
-      value_box(
+      bslib::value_box(
         title = "Latest Campaign", 
         value = textOutput(ns("latest_campaign")),
         textOutput(ns("latest_campaign_info")),
@@ -148,7 +148,6 @@ mod_country_profile_server <- function(id) {
     output$tbl <- reactable::renderReactable({
 
     })
-
 
   })
 }
