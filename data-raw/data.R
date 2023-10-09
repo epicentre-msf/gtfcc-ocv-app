@@ -79,12 +79,20 @@ df_delay <- df_info %>%
 # max_shipments <- df_event_max %>% filter(event == "shipment") %>% pull(max) %>% as.numeric()
 # max_rounds <- df_event_max %>% filter(event == "round") %>% pull(max) %>% as.numeric()
 
+
+# Country profile data ----------------------------------------------------
+
+path_country_data <- max(fs::dir_ls("~/MSF/EpiDS - GTFCC-OCV/data-clean/rds/", regexp = "data_target_areas_.*.rds"))
+
+df_country_profile <- read_rds(path_country_data)
+
 app_data <- c(
   dat,
   tibble::lst(
     df_info,
     df_timevis,
-    df_delay
+    df_delay, 
+    df_country_profile
   )
 )
 

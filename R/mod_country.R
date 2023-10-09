@@ -88,7 +88,7 @@ mod_country_profile_ui <- function(id) {
   )
 }
 
-mod_country_profile_server <- function(id) {
+mod_country_profile_server <- function(id, df_country_profile) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
     
@@ -97,13 +97,13 @@ mod_country_profile_server <- function(id) {
     # PREPARE DATA =============================
     
     #prepare the data
-    prep_dat <- prep_data(dat)
+    prep_dat <- prep_data(df_country_profile)
     
     #filter the data for the selected country and date range
     
     country_df <- reactive({ prep_dat %>% 
         
-        filter(country_name = input$country,
+        filter(country_name == input$country,
                
                between(d1_date_start, as.Date(input$time_period[1]), as.Date(input$time_period[2]) )
         ) })
@@ -115,7 +115,7 @@ mod_country_profile_server <- function(id) {
     camp_summ <-  reactive ({ get_camp_summ(country_df()) })
     
     #get unique admin targeted for the country_df
-    unique_admin <- get_unique_admin(country_df())
+    unique_admin <- reactive({ get_unique_admin(country_df()) } )
     
     # VALUE BOXES ==============================
     output$n_approved <- renderText({

@@ -26,5 +26,5 @@ app_server <- function(input, output, session) {
   # server modules 
   mod_request_server("request")
   mod_timevis_server("timevis")
-  mod_country_profile_server("country")
+  mod_country_profile_server("country", app_data$df_country_profile)
 }
