@@ -150,6 +150,7 @@ mod_request_ui <- function(id) {
         card_header(
           class = "d-flex mb-3 align-items-center",
           tags$span(class = "me-auto pe-1", shiny::icon("chart-column"), "Time-series"),
+          
           div(class = "pe-1", shinyWidgets::radioGroupButtons(
             ns("ts_unit"),
             label = NULL,
@@ -158,6 +159,7 @@ mod_request_ui <- function(id) {
             size = "sm",
             status = "outline-success"
           )),
+          
           div(class = "pe-1", shinyWidgets::pickerInput(
             ns("ts_date"),
             label = NULL,
