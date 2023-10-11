@@ -66,7 +66,7 @@ mod_country_profile_ui <- function(id) {
               shinyWidgets::radioGroupButtons(
                 ns("bar_unit"),
                 label = NULL,
-                choices = c("Doses counts" = "n", "Coverage" = "cov"),
+                choices = bar_var,
                 selected = "n",
                 size = "sm",
                 status = "outline-success"
@@ -89,6 +89,28 @@ mod_country_profile_ui <- function(id) {
                 options = picker_opts(actions = FALSE, search = FALSE),
                 width = 150,
                 multiple = TRUE
+              )), 
+          
+          div(class = "pe-1", 
+              shinyWidgets::pickerInput(
+                ns("admin_level"),
+                label = "Admin level",
+                choices = c("Admin 1" = "adm1", "Admin 2" = "adm2", "Admin 3" = "adm3"),
+                options = picker_opts(actions = FALSE, search = FALSE),
+                width = 150,
+                selected = "latest_date",
+                multiple = FALSE
+              )),
+          
+          div(class = "pe-1", 
+              shinyWidgets::pickerInput(
+                ns("map_agg"),
+                label = "Aggregating rule",
+                choices = c("Latest campaign" = "latest_date", "Greatest target population" = "largest_pop"),
+                options = picker_opts(actions = FALSE, search = FALSE),
+                width = 150,
+                selected = "latest_date",
+                multiple = FALSE
               ))
         ),
         
@@ -179,21 +201,21 @@ mod_country_profile_server <- function(id, df_country_profile) {
     
     output$doses_info <- renderUI({
       
-      tagList( p(glue::glue("{fmt_n_dose(sum(get_request_sum(cmr)$n_d1))} first doses")) ) 
+      tagList( p(glue::glue("{fmt_n_dose( sum(request_summ()$n_d1) )} first doses")) ) 
       
     })
     
-    output$n_areas <- renderUI({
+    output$n_areas <- renderUI({  tagList(p(glue::glue("{unique_admin()$unique_adm3} admin 3")))
       
     })
     
     output$areas_info <- renderUI({
       
-      tagList( p(glue::glue("{unique_admin()$unique_adm1} admin 1")),
-               p(glue::glue("{unique_admin()$unique_adm2} admin 2")), 
-               p(glue::glue("{unique_admin()$unique_adm3} admin 3")) )
-      
-      
+      tagList( 
+        p(glue::glue("{unique_admin()$unique_adm2} admin 2")), 
+        p(glue::glue("{unique_admin()$unique_adm1} admin 1"))
+        
+      ) 
     })
     
     # TIMEVIS/BARCHART ==========================
@@ -203,6 +225,9 @@ mod_country_profile_server <- function(id, df_country_profile) {
     })
     
     output$chart <- highcharter::renderHighchart({
+      
+      
+      y_lab <- names(bar_var[bar_var == isolate(input$bar_unit)])
       
       rounds_summ() %>% 
         
@@ -227,12 +252,16 @@ mod_country_profile_server <- function(id, df_country_profile) {
         
         hc_plotOptions(column = list( stacking = NULL) ) %>% 
         
+        hc_yAxis(title = list(text = y_lab), crosshair = FALSE) %>%
+        
+        hc_xAxis(title = list(text = "Request id"), crosshair = FALSE) %>%
+        
         hc_tooltip(formatter = JS(
           "
     function(){ 
     outHTML =  '<b>' + this.point.request_id + '</b> - <i>' + this.point.dose +'<br>' + this.point.n_rounds + ' ' + 
-    this.point.campaign_type + '</i> campaign' +  '<br>Target: ' + this.point.target_type + 
-    '(' + this.point.target_pop + ')<br>' + 'Doses administered: ' + this.point.n_label + '<br> Coverage: ' + this.point.cov_label
+    this.point.campaign_type + '</i> campaign' +  '<br><b>Target:</b> ' + this.point.target_type + 
+    '(' + this.point.target_pop + ')<br>' + '<b>Doses administered:</b> ' + this.point.n_label + '<br> <b>Coverage:</b> ' + this.point.cov_label
     
     return(outHTML)
     }
@@ -242,14 +271,63 @@ mod_country_profile_server <- function(id, df_country_profile) {
       
     })
     
-    
-    
-    
     # MAPS and TABLE ============================================
     
+    map_df <- reactive({ country_df_no_dupes(country_df(), input$map_agg)})
     
     #MAP
     output$map <- leaflet::renderLeaflet({
+    
+      #left join to sf data 
+      
+      map_df_sf <- inner_join(adm3, map_df, by = "adm3_name")
+      
+      
+      # map of district 
+      bbox <- sf::st_bbox(cmr_sf ) 
+      
+      
+      leaflet::leaflet() %>% 
+        
+        leaflet::fitBounds(bbox[["xmin"]], bbox[["ymin"]], bbox[["xmax"]], bbox[["ymax"]]) %>% 
+        leaflet::addMapPane(name = "boundaries", zIndex = 300) %>%
+        leaflet::addMapPane(name = "choropleth", zIndex = 310) %>%
+        leaflet::addMapPane(name = "circles", zIndex = 410) %>%
+        leaflet::addMapPane(name = "region_highlight", zIndex = 420) %>%
+        leaflet::addMapPane(name = "place_labels", zIndex = 310) %>% 
+        leaflet::addProviderTiles("CartoDB.PositronNoLabels", group = "Light") %>%
+        leaflet::addProviderTiles("CartoDB.PositronOnlyLabels", group = "Light", options = leaflet::leafletOptions(pane = "place_labels")) %>%
+        leaflet::addProviderTiles("OpenStreetMap", group = "OSM") %>%
+        leaflet::addProviderTiles("OpenStreetMap.HOT", group = "OSM HOT") %>%
+        leaflet::addScaleBar(position = "bottomright", options = leaflet::scaleBarOptions(imperial = FALSE)) %>% 
+        leaflet.extras::addFullscreenControl(position = "topleft") %>% 
+        leaflet.extras::addResetMapButton() %>% 
+        leaflet::addLayersControl(baseGroups = c("Light", "OSM", "OSM HOT"), position = "topleft") %>% 
+        
+        leaflet::addPolygons(
+          data = map_df_sf,
+          stroke = TRUE,
+          weight = .1,
+          fillOpacity = .5,
+          color = ~ d1_datecat,
+          label = ~ d1_datecat,
+          options = leaflet::pathOptions(pane = "boundaries")
+        )
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
       
     })
     
@@ -335,8 +413,19 @@ prep_data <- function(target_area_df) {
     
     mutate(
       d1_cov_adm = d1_dose_adm/target_pop,
-      d2_cov_adm = d2_dose_adm/target_pop 
+      d2_cov_adm = d2_dose_adm/target_pop, 
       
+      d1_datecat = case_when(
+        between(date_end_d1, Sys.Date() - 180, Sys.Date() ) ~ "0-6 months", 
+        between(date_end_d1, Sys.Date() - 360, Sys.Date() - 180 ) ~ "6m-1 year", 
+        between(date_end_d1,Sys.Date() - 1080, Sys.Date() - 360) ~ "1-3 year", 
+        date_end_d1 <= Sys.Date() - 1080  ~ "more than 3 years") , 
+      
+      d2_datecat = case_when(
+        between(date_end_d2, Sys.Date() - 180, Sys.Date() ) ~ "0-6 months", 
+        between(date_end_d2, Sys.Date() - 360, Sys.Date() - 180 ) ~ "6m-1 year", 
+        between(date_end_d2,Sys.Date() - 1080, Sys.Date() - 360) ~ "1-3 year", 
+        date_end_d2 <= Sys.Date() - 1080  ~ "more than 3 years") 
     )
 }
 
@@ -440,7 +529,7 @@ summ_tab_data <- function(df) {
     
     t() %>%
     
-    row_to_names(1) 
+    janitor::row_to_names(1) 
   
 }
 
@@ -473,9 +562,13 @@ country_df_no_dupes <- function(country_df, filter_var){
 
 #left join to sf data 
 
-cmr_sf <- inner_join(adm3, cmr, by = "adm3_name")
+#cmr_sf <- inner_join(adm3, cmr, by = "adm3_name")
 
 
+
+#define variables
+
+bar_var <- c("Doses counts" = "n", "Coverage" = "cov")
 
 
 

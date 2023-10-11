@@ -7,6 +7,7 @@ mod_request_ui <- function(id) {
     fillable = FALSE,
     sidebar = sidebar(
       div(
+        
         id = ns("resetable_filters"),
         shinyWidgets::sliderTextInput(
           inputId = ns("q_range"),
@@ -17,6 +18,7 @@ mod_request_ui <- function(id) {
           animate = FALSE,
           width = "95%"
         ),
+        
         shinyWidgets::pickerInput(
           inputId = ns("region"),
           label = "Region",
@@ -24,6 +26,7 @@ mod_request_ui <- function(id) {
           options = picker_opts(),
           multiple = TRUE
         ),
+        
         shinyWidgets::pickerInput(
           inputId = ns("country"),
           label = "Country",
@@ -31,6 +34,7 @@ mod_request_ui <- function(id) {
           options = picker_opts(search = TRUE),
           multiple = TRUE
         ),
+        
         shinyWidgets::pickerInput(
           inputId = ns("status"),
           label = "Status",
@@ -38,6 +42,7 @@ mod_request_ui <- function(id) {
           options = picker_opts(),
           multiple = TRUE
         ),
+        
         shinyWidgets::pickerInput(
           inputId = ns("context"),
           label = "Context",
@@ -45,6 +50,7 @@ mod_request_ui <- function(id) {
           options = picker_opts(),
           multiple = TRUE
         ),
+        
         shinyWidgets::pickerInput(
           inputId = ns("mechanism"),
           label = "Mechanism",
@@ -52,6 +58,7 @@ mod_request_ui <- function(id) {
           options = picker_opts(),
           multiple = TRUE
         ),
+        
         shinyWidgets::pickerInput(
           inputId = ns("agency"),
           label = "Request Agency",
@@ -59,6 +66,7 @@ mod_request_ui <- function(id) {
           options = picker_opts(),
           multiple = TRUE
         ),
+        
         shinyWidgets::pickerInput(
           inputId = ns("vaccine"),
           label = "Type of vaccine",
@@ -66,6 +74,7 @@ mod_request_ui <- function(id) {
           options = picker_opts(),
           multiple = TRUE
         ),
+        
         actionButton(ns("go"), "Update Data", icon = icon("database"), class = "btn-success btn-sm", style = "color: #fff;"),
         actionButton(ns("reset"), "Reset Inputs", icon = icon("arrows-rotate"), class = "btn-warning btn-sm", style = "color: #fff;")
       )
