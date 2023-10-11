@@ -87,7 +87,7 @@ mod_country_profile_ui <- function(id) {
                 label = "Select a campaign",
                 choices = NULL,
                 options = picker_opts(actions = FALSE, search = FALSE),
-                width = 150,
+                width = 100,
                 multiple = TRUE
               )), 
           
@@ -97,8 +97,19 @@ mod_country_profile_ui <- function(id) {
                 label = "Admin level",
                 choices = c("Admin 1" = "adm1", "Admin 2" = "adm2", "Admin 3" = "adm3"),
                 options = picker_opts(actions = FALSE, search = FALSE),
-                width = 150,
-                selected = "latest_date",
+                width = 100,
+                selected = "adm1",
+                multiple = FALSE
+              )),
+          
+          div(class = "pe-1", 
+              shinyWidgets::pickerInput(
+                ns("choro_var"),
+                label = "Display variable",
+                choices = c("Doses 1" = "d1", "Doses 2" = "d2"),
+                options = picker_opts(actions = FALSE, search = FALSE),
+                width = 100,
+                selected = "d1",
                 multiple = FALSE
               )),
           
@@ -108,7 +119,7 @@ mod_country_profile_ui <- function(id) {
                 label = "Aggregating rule",
                 choices = c("Latest campaign" = "latest_date", "Greatest target population" = "largest_pop"),
                 options = picker_opts(actions = FALSE, search = FALSE),
-                width = 150,
+                width = 100,
                 selected = "latest_date",
                 multiple = FALSE
               ))
@@ -205,7 +216,9 @@ mod_country_profile_server <- function(id, df_country_profile) {
       
     })
     
-    output$n_areas <- renderUI({  tagList(p(glue::glue("{unique_admin()$unique_adm3} admin 3")))
+    output$n_areas <- renderUI({  
+      
+      tagList(p(glue::glue("{unique_admin()$unique_adm3} admin 3")))
       
     })
     
@@ -273,63 +286,219 @@ mod_country_profile_server <- function(id, df_country_profile) {
     
     # MAPS and TABLE ============================================
     
-    map_df <- reactive({ country_df_no_dupes(country_df(), input$map_agg)})
+    #prepare the data for map
+    map_df <- reactive({ 
+      
+      if(length(input$campaign) ) {
+        
+        map_df <- get_map_data(filter(country_df(), 
+                                      request_id %in% input$campaign), 
+                               
+                               filter_var = input$map_agg, 
+                               admin_level = input$admin_level)
+      } else {
+        
+        map_df <- get_map_data(country_df(), 
+                               
+                               filter_var = input$map_agg, 
+                               
+                               admin_level = input$admin_level) }
+      return(map_df)
+      
+    } )
+    
+    
+    #geo reference the map_df using geodata and the input$admin_level
+    geo_select <- reactive({
+      geo_data[[input$admin_level]]
+    })
+    
+    rv <- reactiveValues()
+    
+    observe({
+      geo_join <- geo_select()$join_by
+      geo_col <- unname(geo_join)
+      geo_col_sym <- rlang::sym(geo_col)
+      geo_name_col <- geo_select()$name_var
+      geo_name_col_sym <- rlang::sym(geo_name_col)
+      geo_level_name <- geo_select()$level_name
+      
+      # filter sf polygons to only those found in dataset
+      sf <- geo_select()$sf
+      
+      sf <- inner_join(sf, map_df(), by = geo_join)
+      
+      #sf <- suppressMessages(sf::st_filter(sf, affected))
+      
+      # save as reactive values
+      rv$geo_join <- geo_join
+      rv$geo_col <- geo_col
+      rv$geo_col_sym <- geo_col_sym
+      rv$geo_name_col <- geo_name_col
+      rv$geo_name_col_sym <- geo_name_col_sym
+      rv$geo_level_name <- geo_level_name
+      rv$sf <- sf
+    })
     
     #MAP
     output$map <- leaflet::renderLeaflet({
-    
-      #left join to sf data 
-      
-      map_df_sf <- inner_join(adm3, map_df, by = "adm3_name")
-      
       
       # map of district 
-      bbox <- sf::st_bbox(cmr_sf ) 
+      bbox <- sf::st_bbox( isolate(filter(sf_world, country == "Cameroon")) )  
       
-      
-      leaflet::leaflet() %>% 
-        
-        leaflet::fitBounds(bbox[["xmin"]], bbox[["ymin"]], bbox[["xmax"]], bbox[["ymax"]]) %>% 
-        leaflet::addMapPane(name = "boundaries", zIndex = 300) %>%
-        leaflet::addMapPane(name = "choropleth", zIndex = 310) %>%
-        leaflet::addMapPane(name = "circles", zIndex = 410) %>%
-        leaflet::addMapPane(name = "region_highlight", zIndex = 420) %>%
-        leaflet::addMapPane(name = "place_labels", zIndex = 310) %>% 
-        leaflet::addProviderTiles("CartoDB.PositronNoLabels", group = "Light") %>%
-        leaflet::addProviderTiles("CartoDB.PositronOnlyLabels", group = "Light", options = leaflet::leafletOptions(pane = "place_labels")) %>%
-        leaflet::addProviderTiles("OpenStreetMap", group = "OSM") %>%
-        leaflet::addProviderTiles("OpenStreetMap.HOT", group = "OSM HOT") %>%
-        leaflet::addScaleBar(position = "bottomright", options = leaflet::scaleBarOptions(imperial = FALSE)) %>% 
-        leaflet.extras::addFullscreenControl(position = "topleft") %>% 
+      leaflet::leaflet() %>%
+        leaflet::fitBounds(bbox[["xmin"]], bbox[["ymin"]], bbox[["xmax"]], bbox[["ymax"]]) %>%
+        leaflet::addMapPane(name = "choropleth", zIndex = 300) %>%
+        leaflet::addMapPane(name = "circles", zIndex = 420) %>%
+        leaflet::addMapPane(name = "geo_highlight", zIndex = 430) %>%
+        leaflet::addMapPane(name = "place_labels", zIndex = 310) %>%
+        leaflet::addProviderTiles("CartoDB.PositronNoLabels") %>%
+        leaflet::addProviderTiles("CartoDB.PositronOnlyLabels", options = leaflet::leafletOptions(pane = "place_labels"), group = "Labels") %>%
+        #leaflet::addProviderTiles("OpenStreetMap", group = "OSM") %>%
+        #leaflet::addProviderTiles("OpenStreetMap.HOT", group = "OSM HOT") %>%
+        leaflet::addScaleBar(position = "bottomleft") %>%
+        leaflet.extras::addFullscreenControl(position = "topleft") %>%
         leaflet.extras::addResetMapButton() %>% 
-        leaflet::addLayersControl(baseGroups = c("Light", "OSM", "OSM HOT"), position = "topleft") %>% 
-        
-        leaflet::addPolygons(
-          data = map_df_sf,
-          stroke = TRUE,
-          weight = .1,
-          fillOpacity = .5,
-          color = ~ d1_datecat,
-          label = ~ d1_datecat,
-          options = leaflet::pathOptions(pane = "boundaries")
+        leaflet::addLayersControl(
+          baseGroups = c("Coverage", "Last round"),
+          options = layersControlOptions(collapsed = FALSE),
+          overlayGroups = c("Labels", "Doses")
         )
       
+    })
+    
+    #Observe the map 
+    observe({
+      
+      req(input$map_groups)
+      
+      boundaries <- rv$sf
+      
+      cov_var <- paste0("cov_", input$choro_var)
+      last_round_var <- paste0(input$choro_var, "_datecat")
+      
+      n_dose <- paste0(input$choro_var, "_dose_adm")
+      
+      #circle width
+      pie_width <- 60 * sqrt(boundaries[[n_dose]]) / sqrt(max(boundaries[[n_dose]]))
       
       
+      # Call the color function 
+      cov_pal <- colorNumeric("YlOrRd",  domain = 0:100 )
+      last_round_pal <- colorFactor("YlOrRd", domain = last_round_cat )
       
+      leaflet::leafletProxy("map", session) %>%
+        
+        leaflet::clearGroup("Coverage") %>% 
+        
+        leaflet::clearGroup("Last round") %>% 
+        
+        leaflet.minicharts::clearMinicharts()
       
+      req(nrow(boundaries) > 0)
       
+      bbox <- sf::st_bbox(boundaries)
       
-      
-      
-      
-      
-      
-      
-      
-      
+      leaflet::leafletProxy("map", session) %>%
+        
+        leaflet::addPolygons(
+          data = boundaries,
+          fillColor = ~ cov_pal(boundaries[[cov_var]]),
+          fillOpacity = .7,
+          color = "black",
+          stroke = TRUE,
+          weight = 1,
+          label = boundaries[[cov_var]], # boundaries[[rv$geo_name_col]],
+          group = "Coverage",
+          highlightOptions = leaflet::highlightOptions(bringToFront = TRUE, weight = 3),
+          options = leaflet::pathOptions(pane = "choropleth")
+          
+        ) %>%
+        
+        leaflet::addLegend(
+          title = "Dose coverage",
+          data = boundaries,
+          pal = cov_pal,
+          values = ~ 0:100,
+          opacity = .7,
+          position = "bottomright",
+          group = "Coverage",
+          layerId = "cov_leg",
+          na.label = "No data"
+        ) %>% 
+        
+        leaflet::addPolygons(
+          data = boundaries,
+          fillColor = ~ last_round_pal(boundaries[[last_round_var]]),
+          fillOpacity = .7,
+          color = "black",
+          stroke = TRUE,
+          weight = 1,
+          label = boundaries[[last_round_var]], # boundaries[[rv$geo_name_col]],
+          group = "Last round",
+          highlightOptions = leaflet::highlightOptions(bringToFront = TRUE, weight = 3),
+          options = leaflet::pathOptions(pane = "choropleth")
+          
+        ) %>% 
+        
+        leaflet::addLegend(
+          title = "Time since last round",
+          data = boundaries,
+          pal = last_round_pal,
+          values = ~ last_round_cat,
+          opacity = .7,
+          position = "bottomright",
+          group = "Last round",
+          layerId = "last_round_leg",
+          na.label = "No data"
+        ) %>%  
+        
+        leaflet.minicharts::addMinicharts(
+          
+          lng = boundaries$lon,
+          lat = boundaries$lat,
+          chartdata = boundaries[[n_dose]], 
+          opacity = .9,
+          #fillColor = pal10[1],
+          #colorPalette = pal10,
+          legend = TRUE,
+          showLabels = TRUE,
+          type = "pie",
+          width = pie_width
+          
+        ) %>% 
+        
+        
+        leaflet::flyToBounds(bbox[["xmin"]], bbox[["ymin"]], bbox[["xmax"]], bbox[["ymax"]])
       
     })
+    
+    
+    observe({
+      
+      if("Coverage" %in% input$map_groups ){
+        
+        leaflet::leafletProxy("map", session) %>%
+          
+          leaflet::removeControl("last_round_leg")
+        
+      } else if("Last round" %in% input$map_groups) {
+        
+        leaflet::leafletProxy("map", session) %>%
+          
+          leaflet::removeControl("cov_leg")
+      } 
+      
+      if(!"Doses" %in% input$map_groups){
+        
+        leaflet::leafletProxy("map", session) %>%
+          leaflet.minicharts::clearMinicharts()
+        
+      }
+      
+    }
+    )
+    
     
     
     #TABLE
@@ -409,24 +578,12 @@ prep_data <- function(target_area_df) {
              adm2_name, 
              adm3_name) %>% 
     
-    summarise(across(is.numeric, ~ sum(.x)), .groups = "drop" ) %>% 
+    summarise(across(is.numeric, ~ sum(.x)), 
+              .groups = "drop" ) %>% 
     
     mutate(
       d1_cov_adm = d1_dose_adm/target_pop,
-      d2_cov_adm = d2_dose_adm/target_pop, 
-      
-      d1_datecat = case_when(
-        between(date_end_d1, Sys.Date() - 180, Sys.Date() ) ~ "0-6 months", 
-        between(date_end_d1, Sys.Date() - 360, Sys.Date() - 180 ) ~ "6m-1 year", 
-        between(date_end_d1,Sys.Date() - 1080, Sys.Date() - 360) ~ "1-3 year", 
-        date_end_d1 <= Sys.Date() - 1080  ~ "more than 3 years") , 
-      
-      d2_datecat = case_when(
-        between(date_end_d2, Sys.Date() - 180, Sys.Date() ) ~ "0-6 months", 
-        between(date_end_d2, Sys.Date() - 360, Sys.Date() - 180 ) ~ "6m-1 year", 
-        between(date_end_d2,Sys.Date() - 1080, Sys.Date() - 360) ~ "1-3 year", 
-        date_end_d2 <= Sys.Date() - 1080  ~ "more than 3 years") 
-    )
+      d2_cov_adm = d2_dose_adm/target_pop)
 }
 
 # function that summarize the requests by a country
@@ -487,9 +644,8 @@ get_unique_admin <- function(country_df) {
     
     summarise(unique_adm1 = n_distinct(adm1_name), 
               unique_adm2 = n_distinct(adm2_name), 
-              unique_adm3 = n_distinct(adm3_name)
-    ) }
-
+              unique_adm3 = n_distinct(adm3_name), 
+              .groups = "drop" ) }
 
 #function to create summary table from the requests summary data
 summ_tab_data <- function(df) {
@@ -533,15 +689,17 @@ summ_tab_data <- function(df) {
   
 }
 
-# function to prepare the map data -- TO BE CHECKED not sure it works 
+#get the map data filtered and grouped
 
-country_df_no_dupes <- function(country_df, filter_var){
+get_map_data <- function(country_df, filter_var, admin_level){
   
   n_rounds <- unique(country_df$n_rounds)
   
+  admin_sym <- sym(paste0(admin_level, "_name"))
+  
   df <- country_df %>% 
     
-    group_by(camp_id, adm1_name, adm2_name, adm3_name) 
+    group_by(request_id, !!admin_sym ) 
   
   if(filter_var == "largest_pop") {
     
@@ -549,26 +707,51 @@ country_df_no_dupes <- function(country_df, filter_var){
     
   } else if (filter_var == "latest_date" & n_rounds == "one dose") { 
     
-    df <- df %>% filter( d1_date_end == max(d1_date_end) )
+    df <- df %>% filter( date_end_d1 == max(date_end_d1) )
     
   } else {
     
-    df <- df %>% filter( d2_date_end == max(d2_date_end) )
+    df <- df %>% filter( date_end_d2 == max(date_end_d2) )
     
   }   
   
-  df %>% ungroup()
+  df %>% 
+    
+    summarise(n_targets = n(), 
+              
+              date_start_d1 = min(date_start_d1),
+              date_end_d1 = max(date_end_d1),
+              date_start_d2 =min(date_start_d2) , 
+              date_end_d2 = max(date_end_d2),
+              
+              across(c(target_pop,
+                       d1_dose_adm, 
+                       d2_dose_adm), ~ sum(.x)), 
+              
+              across(c(target_type, ), 
+                     ~ paste0(unique(.x), collapse = ", ")), 
+              
+              .groups = "drop") %>%
+    
+    ungroup() %>% 
+    
+    mutate(cov_d1 = round(digits = 1, d1_dose_adm /target_pop * 100 ), 
+           cov_d2 = round(digits = 1, d2_dose_adm /target_pop * 100 ), 
+           
+           d1_datecat = case_when(
+             between(date_end_d1, Sys.Date() - 180, Sys.Date() ) ~ "0-6 months", 
+             between(date_end_d1, Sys.Date() - 360, Sys.Date() - 180 ) ~ "6m-1 year", 
+             between(date_end_d1,Sys.Date() - 1080, Sys.Date() - 360) ~ "1-3 year", 
+             date_end_d1 <= Sys.Date() - 1080  ~ "more than 3 years") , 
+           
+           d2_datecat = case_when(
+             between(date_end_d2, Sys.Date() - 180, Sys.Date() ) ~ "0-6 months", 
+             between(date_end_d2, Sys.Date() - 360, Sys.Date() - 180 ) ~ "6m-1 year", 
+             between(date_end_d2,Sys.Date() - 1080, Sys.Date() - 360) ~ "1-3 year", 
+             date_end_d2 <= Sys.Date() - 1080  ~ "more than 3 years") 
+    )
 }
 
-#left join to sf data 
-
-#cmr_sf <- inner_join(adm3, cmr, by = "adm3_name")
-
-
-
 #define variables
-
 bar_var <- c("Doses counts" = "n", "Coverage" = "cov")
-
-
-
+last_round_cat <- c("0-6 months","6m-1 year", "1-3 year", "more than 3 years")

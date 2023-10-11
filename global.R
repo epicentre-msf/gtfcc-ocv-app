@@ -27,12 +27,37 @@ WARNING <- "#d39234"
 
 # local disk cache
 shiny::shinyOptions(cache = cachem::cache_disk(here::here(".cache")))
- 
+
 # week starts monday
 options("lubridate.week.start" = 1)
 
 date_updated <- readr::read_rds(here::here("data", "date_updated.rds")) %>% format("%d %B %Y")
 sf_world <- readr::read_rds(here::here("data", "sf_world.rds"))
+
+#read  CMR for demo
+
+# geo data format ==========================
+geo_data <- list(
+  "adm1" = list(
+    level_name = "Admin 1",
+    sf = read_rds(here::here("data", "cmr_adm1.rds")),
+    name_var = "adm1_name",
+    join_by = c("adm1_name" = "adm1_name")
+  ),
+  "adm2" = list(
+    level_name = "Admin 2",
+    sf =  read_rds(here::here("data", "cmr_adm2.rds")),
+    name_var = "adm2_name",
+    join_by = c("adm2_name" = "adm2_name")
+  ),
+  "adm3" = list(
+    level_name = "Admin 3",
+    sf = readr::read_rds(here::here("data", "cmr_adm3.rds")),
+    name_var = "adm3_name",
+    join_by = c("adm3_name" = "adm3_name")
+  )
+)
+
 app_data <- readr::read_rds(here::here("data", "app_data.rds"))
 df_request <- app_data$request
 df_round <- app_data$campaign_and_round
@@ -45,7 +70,7 @@ q_range <- get_q_range(c(
   df_round$cr_date_round_start
 ))
 
- disconnected <- sever::sever_default(
+disconnected <- sever::sever_default(
   title = "Disconnected",
   subtitle = "Sorry your session timed-out or something went wrong",
   button = "Reconnect",
