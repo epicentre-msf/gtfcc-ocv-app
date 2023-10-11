@@ -26,5 +26,13 @@ app_server <- function(input, output, session) {
   # server modules 
   mod_request_server("request")
   mod_timevis_server("timevis")
-  mod_country_profile_server("country", app_data$df_country_profile)
+  
+  country_tab_init <- TRUE
+  observeEvent(input$tabs, {
+    if (all(input$tabs == "country", country_tab_init)) {
+      country_tab_init <<- FALSE
+      mod_country_profile_server("country", app_data$df_country_profile)
+    }
+  })
+  
 }
