@@ -2,6 +2,7 @@
 mod_country_profile_ui <- function(id) {
   ns <- NS(id)
   bslib::layout_sidebar(
+    fillable = FALSE,
     sidebar = bslib::sidebar(
       shinyWidgets::pickerInput(
         inputId = ns("country"),
@@ -21,38 +22,41 @@ mod_country_profile_ui <- function(id) {
       ) ), 
     
     bslib::layout_column_wrap(
-      width = 1/5,
+      width = 1/3,
       fill = FALSE,
       bslib::value_box(
         title = "Requests approved", 
         value = textOutput(ns("n_approved")),
         textOutput(ns("approved_info")),
+        showcase = bsicons::bs_icon("box-seam"),
         theme = "primary"
       ),
       bslib::value_box(
         title = "Campaigns", 
         value = textOutput(ns("n_campaigns")),
         textOutput(ns("campaigns_info")),
+        showcase = bsicons::bs_icon("box-seam"),
         theme = "primary"
       ),
       bslib::value_box(
         title = "Doses", 
-        value = uiOutput(ns("n_doses")),
+        value = textOutput(ns("n_doses")),
         uiOutput(ns("doses_info")),
-        theme = "primary"
-      ),
-      bslib::value_box(
-        title = "Targeted areas", 
-        value = uiOutput(ns("n_areas")),
-        uiOutput(ns("areas_info")),
-        theme = "primary"
-      ),
-      bslib::value_box(
-        title = "Latest Campaign", 
-        value = uiOutput(ns("latest_campaign")),
-        uiOutput(ns("latest_campaign_info")),
+        showcase = bsicons::bs_icon("box-seam"),
         theme = "primary"
       )
+      # bslib::value_box(
+      #   title = "Targeted areas", 
+      #   value = textOutput(ns("n_areas")),
+      #   uiOutput(ns("areas_info")),
+      #   theme = "primary"
+      # ),
+      # bslib::value_box(
+      #   title = "Latest Campaign", 
+      #   value = textOutput(ns("latest_campaign")),
+      #   uiOutput(ns("latest_campaign_info")),
+      #   theme = "primary"
+      # )
     ),
     bslib::layout_columns(
       col_widths = c(6, 6, 6, 6),
@@ -61,7 +65,10 @@ mod_country_profile_ui <- function(id) {
           class = "d-flex justify-content-start align-items-center",
           "Timeline"
         ),
-        bslib::card_body(timevis::timevisOutput(ns("timevis")))
+        bslib::card_body(
+          padding = 0,
+          timevis::timevisOutput(ns("timevis"))
+        )
       ),
       bslib::card(
         bslib::card_header(
@@ -89,39 +96,40 @@ mod_country_profile_ui <- function(id) {
 }
 
 mod_country_profile_server <- function(id, df_country_profile) {
-  moduleServer(id, function(input, output, session) {
+  moduleServer(id, function(input,
+                            output,
+                            session) {
     ns <- session$ns
     
     # OBSERVERS ================================
     
     # PREPARE DATA =============================
     
-    #prepare the data
+    # prepare the data
     prep_dat <- prep_data(df_country_profile)
     
-    #filter the data for the selected country and date range
-    country_df <- reactive({ prep_dat %>% 
-        
-        filter(country_code == input$country,
-               
-               between(d1_date_start, as.Date(input$time_period[1]), as.Date(input$time_period[2]) )
-        ) })
+    # filter the data for the selected country and date range
+    country_df <- reactive({
+      prep_dat %>%
+        dplyr::filter(
+          country_code == input$country,
+          between(d1_date_start, as.Date(input$time_period[1]), as.Date(input$time_period[2]))
+        )
+    })
     
-    #summarise the campaigns for the country df
+    # summarise the campaigns for the country df
     camp_summ <-  reactive ({ get_camp_summ(country_df()) })
     
-    #get the latest campaign
-    latest_camp <- reactive( { 
-      
-      camp_summ() %>% 
-        
-        filter(d2_date_end == max(d2_date_end) ) })
+    # get the latest campaign
+    latest_camp <- reactive({
+      camp_summ() %>% dplyr::filter(d2_date_end == max(d2_date_end))
+    })
     
     #summarise all data for the country_df
     country_summ <- reactive({ get_country_summ(camp_summ()) })
     
     #get unique admin targeted for the country_df
-    unique_admin <- reactive({ get_unique_admin(country_df()) } )
+    unique_admin <- reactive({ get_unique_admin(country_df()) })
     
     
     # VALUE BOXES ==============================
@@ -134,49 +142,42 @@ mod_country_profile_server <- function(id, df_country_profile) {
     })
     
     output$n_campaigns <- renderText({
-      
-      scales::number(country_summ()$n_campaigns )
-      
-      
+      scales::number(country_summ()$n_campaigns)
     })
     
     output$campaigns_info <- renderText({
-      
-      glue::glue("{country_summ()$n_reactive}\n ({country_summ()$pct_reactive} %) reactive campaigns")
-      
+      glue::glue("{country_summ()$n_reactive} ({country_summ()$pct_reactive} %) reactive campaigns")
     })
     
     output$n_doses <- renderText({
-      
-      glue::glue("{fmt_n_dose(country_summ()$n_d1 + country_summ()$n_d2 )} administered doses")
-      
+      glue::glue("{fmt_n_dose(country_summ()$n_d1 + country_summ()$n_d2 )}")
     })
     
     output$doses_info <- renderUI({
-      
-      tagList( p(glue::glue("{fmt_n_dose(country_summ()$n_d1)} first doses")),
-               p(glue::glue("{fmt_n_dose(country_summ()$n_d2)} second doses")) )
-      
+      tagList(
+        p(glue::glue("{fmt_n_dose(country_summ()$n_d1)} first doses")),
+        p(glue::glue("{fmt_n_dose(country_summ()$n_d2)} second doses"))
+      )
     })
     
     output$n_areas <- renderUI({
       
-      tagList( p(glue::glue("{unique_admin()$unique_adm1} admin 1 levels")),
-               p(glue::glue("{unique_admin()$unique_adm2} admin 2 levels")), 
-               p(glue::glue("{unique_admin()$unique_adm3} admin 3 levels")))
-      
     })
     
     output$areas_info <- renderUI({
-      
+
+      tagList(
+        p(glue::glue("{unique_admin()$unique_adm1} admin 1 levels")),
+        p(glue::glue("{unique_admin()$unique_adm2} admin 2 levels")),
+        p(glue::glue("{unique_admin()$unique_adm3} admin 3 levels"))
+      )
       
     })
     
     output$latest_campaign <- renderUI({
-      
-      
-      tagList( p(glue::glue("from {latest_camp()$d1_date_start} to {latest_camp()$d2_date_end}")) )
-      
+      tagList(
+        p(glue::glue("from {latest_camp()$d1_date_start} to {latest_camp()$d2_date_end}"))
+      )
     })
     
     output$latest_campaign_info <- renderUI({
@@ -185,19 +186,55 @@ mod_country_profile_server <- function(id, df_country_profile) {
         p(glue::glue("{latest_camp()$campaign_type} campaign")),
         p(glue::glue("targeting {latest_camp()$target_type }", " ({fmt_n_dose(latest_camp()$target_pop)} people)")),
         p(glue::glue("{latest_camp()$cov_d1}% first dose coverage")), 
-        p(glue::glue("{latest_camp()$cov_d2}% second dose coverage")), 
-        
+        p(glue::glue("{latest_camp()$cov_d2}% second dose coverage")),
         p(glue::glue("{latest_camp()$drop_out}% dropout rate"))
       )
-      
-      
-      
-      
+
     })
     
     # GRAPHICS/TABLES ==========================
     output$timevis <- timevis::renderTimevis({
+      df_tv <- df_country_profile %>% 
+        filter(
+          country_code == input$country,
+          between(t_d1_date_round_start, as.Date(input$time_period[1]), as.Date(input$time_period[2]))
+        ) %>% 
+        select(group = t_r_id, contains("date_round")) %>% 
+        tibble::rowid_to_column() %>% 
+        pivot_longer(
+          contains("date_round"),
+          names_to = "dose",
+          values_to = "date"
+        ) %>% 
+        separate(dose, c("dose", "time"), sep = "_date_round_") %>% 
+        mutate(content = str_to_upper(str_remove(dose, "t_"))) %>% 
+        pivot_wider(names_from = "time", values_from = "date") %>% 
+        group_by(group, content) %>% 
+        summarise(
+          start = min(start, na.rm = FALSE),
+          end = min(end, na.rm = FALSE),
+          .groups = "drop"
+        ) %>% 
+        drop_na(start) %>% 
+        mutate(
+          title = str_replace(content, "D", "Dose "),
+          style = if_else(content == "D1", "background: steelblue;", "background: orange;")
+        )
+
+      df_groups <- distinct(df_tv, id = group) %>%
+        mutate(content = glue::glue("<b>{id}</b>")) %>%
+        arrange(id)
       
+      date_range <- range(c(df_tv$start, df_tv$end), na.rm = TRUE)
+      
+      timevis(
+        data = df_tv,
+        group = df_groups,
+        options = list(
+          start = date_range[1] - 60,
+          end = date_range[2] + 60
+        )
+      )
     })
     
     output$chart <- highcharter::renderHighchart({
@@ -280,9 +317,7 @@ prep_data <- function(target_area_df) {
              adm2_name, 
              adm3_name) %>% 
     
-    summarise(across(is.numeric, ~ sum(.x)) ) %>% 
-    
-    ungroup() %>% 
+    summarise(across(where(is.numeric), ~ sum(.x)), .groups = "drop") %>% 
     
     mutate(
       d1_cov_adm = d1_dose_adm/target_pop,
@@ -348,10 +383,10 @@ get_country_summ <- function(camp_sum_df) {
 
 # Function to get unique number of admin area targetted per country 
 get_unique_admin <- function(country_df) {
-  
-  country_df %>% 
-    
-    summarise(unique_adm1 = n_distinct(adm1_name), 
-              unique_adm2 = n_distinct(adm2_name), 
-              unique_adm3 = n_distinct(adm3_name)
-    ) }
+  country_df %>%
+    summarise(
+      unique_adm1 = n_distinct(adm1_name),
+      unique_adm2 = n_distinct(adm2_name),
+      unique_adm3 = n_distinct(adm3_name)
+    )
+}

@@ -63,7 +63,7 @@ ui <- tagList(
       tags$a(
         tags$img(
           src = "gtfcc-logo.jpg",
-          height = "35px"
+          height = "30px"
         ),
         class = "p-0",
         href = "https://www.gtfcc.org/",
