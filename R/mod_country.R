@@ -61,7 +61,7 @@ mod_country_profile_ui <- function(id) {
         htmlOutput(ns("dose_admi_info")),
         theme_color = "success",
         # showcase = health_icon("symbols/cholera", type = "outline", height = 80),
-        showcase = bs_icon("droplet")
+        showcase = bs_icon("prescription2")
       ),
       bslib::value_box(
         title = "Targeted areas",
@@ -76,8 +76,7 @@ mod_country_profile_ui <- function(id) {
         value = textOutput(ns("last_camp")),
         textOutput(ns("last_camp_info")),
         theme_color = "success",
-        # showcase = health_icon("medications/pills_2", type = "outline", height = 80)
-        showcase = bs_icon("prescription2")
+        showcase = bs_icon("clock-history")
       )
     ),
     
