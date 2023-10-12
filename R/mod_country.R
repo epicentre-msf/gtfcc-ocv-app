@@ -1,48 +1,59 @@
 
 mod_country_profile_ui <- function(id) {
   ns <- NS(id)
-  start_date <- as.Date("2021-07-03")
-  end_date <- as.Date("2023-02-01")
+  start_date <- Sys.Date() - lubridate::years(3) # as.Date("2021-07-03")
+  end_date <- Sys.Date() # as.Date("2023-02-01")
   # test_date <- as.Date("2021-12-01")
-  div(
-    class = "container",
-    # bslib::layout_sidebar(
-    #   fillable = FALSE,
-    #   sidebar = bslib::sidebar(
-    #     shinyWidgets::pickerInput(
-    #       inputId = ns("country"),
-    #       label = "Country",
-    #       choices = c("Cameroon" = "CMR"),
-    #       options = picker_opts()
-    #     ),
-    #     shiny::sliderInput(
-    #       inputId = ns("time_period"),
-    #       label = "Time period",
-    #       min = as.Date("2021-07-03"),
-    #       max = as.Date("2023-02-01"),
-    #       value = c(as.Date("2021-07-03"), as.Date("2023-02-01")),
-    #       width = "100%",
-    #       timeFormat = "%d/%m/%y"
-    #     )
-    #   ),
-    bslib::layout_columns(
-      col_widths = c(-2, 4, 4, -2),
+  # div(
+  #   class = "container",
+  bslib::layout_sidebar(
+    fillable = FALSE,
+    sidebar = bslib::sidebar(
       shinyWidgets::pickerInput(
         inputId = ns("country"),
-        label = tags$h5("Select country"),
+        label = "Country",
         choices = c("Cameroon" = "CMR"),
-        options = picker_opts(style = "btn-lg btn-outline-success")
+        options = picker_opts()
       ),
       shiny::sliderInput(
         inputId = ns("time_period"),
-        label = tags$h5("Time period"),
+        label = "Time period",
         min = start_date,
         max = end_date,
         value = c(start_date, end_date),
         width = "100%",
         timeFormat = "%d/%m/%y"
+      ),
+      shinyWidgets::radioGroupButtons(
+        ns("period_jump"),
+        label = "Jump to last:",
+        choices = c("3 years" = 3*12, "1 year" = 12, "6 months" = 6),
+        size = "sm",
+        status = "outline-success"
       )
+      # shiny::helpText("Jump to last:"),
+      # actionButton(ns("period_6m"), "6 months", class = "btn-sm"),
+      # actionButton(ns("period_1y"), "1 year", class = "btn-sm"),
+      # actionButton(ns("period_3y"), "3 year", class = "btn-sm")
     ),
+    # bslib::layout_columns(
+    #   col_widths = c(-2, 4, 4, -2),
+    #   shinyWidgets::pickerInput(
+    #     inputId = ns("country"),
+    #     label = tags$h5("Select country"),
+    #     choices = c("Cameroon" = "CMR"),
+    #     options = picker_opts(style = "btn-lg btn-outline-success")
+    #   ),
+    #   shiny::sliderInput(
+    #     inputId = ns("time_period"),
+    #     label = tags$h5("Time period"),
+    #     min = start_date,
+    #     max = end_date,
+    #     value = c(start_date, end_date),
+    #     width = "100%",
+    #     timeFormat = "%d/%m/%y"
+    #   )
+    # ),
     bslib::layout_column_wrap(
       width = 1 / 3,
       fill = FALSE,
@@ -73,13 +84,14 @@ mod_country_profile_ui <- function(id) {
     ),
     bslib::layout_columns(
       col_widths = c(6, 6, 6, 6),
+      row_heights = c(2, 3),
       bslib::card(
         full_screen = TRUE,
         bslib::card_header(
           class = "d-flex justify-content-start align-items-center",
           "Campaign timeline"
         ),
-        bslib::card_body(padding = 0, timevis::timevisOutput(ns("timevis")))
+        bslib::card_body(padding = 0, timevis::timevisOutput(ns("timevis"), height = 300))
       ),
       bslib::card(
         full_screen = TRUE,
@@ -98,7 +110,7 @@ mod_country_profile_ui <- function(id) {
             )
           )
         ),
-        bslib::card_body(padding = 0, highcharter::highchartOutput(ns("chart")))
+        bslib::card_body(padding = 0, highcharter::highchartOutput(ns("chart"), height = 300))
       ),
       bslib::card(
         full_screen = TRUE,
@@ -146,6 +158,15 @@ mod_country_profile_ui <- function(id) {
               width = "100%",
               selected = "latest_date",
               multiple = FALSE
+            ),
+            sliderInput(
+              ns("circle_size_mult"),
+              label = "Circle size multiplyer",
+              min = 1,
+              max = 10,
+              value = 6,
+              step = 1,
+              width = 200
             )
           )
         ),
@@ -167,6 +188,53 @@ mod_country_profile_server <- function(id, df_country_profile) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
     
+    # OBSERVERS ================================
+    
+    observeEvent(input$period_jump, {
+      date_range <- c(Sys.Date() - lubridate::period(as.numeric(input$period_jump), "months"), Sys.Date())
+      updateSliderInput(
+        session,
+        "time_period",
+        value = date_range,
+        timeFormat = "%d/%m/%y"
+      )
+    })
+    
+    observeEvent(input$period_6m, {
+      date_range <- c(Sys.Date() - lubridate::period(6, "months"), Sys.Date())
+      updateSliderInput(
+        session,
+        "time_period",
+        value = date_range
+      )
+    })
+    
+    observeEvent(input$period_1y, {
+      date_range <- c(Sys.Date() - lubridate::period(1, "year"), Sys.Date())
+      updateSliderInput(
+        session,
+        "time_period",
+        value = date_range
+      )
+    })
+    
+    observeEvent(input$period_3y, {
+      date_range <- c(Sys.Date() - lubridate::period(3, "years"), Sys.Date())
+      updateSliderInput(
+        session,
+        "time_period",
+        value = date_range
+      )
+    })
+    
+    observeEvent(country_df(), {
+      shinyWidgets::updatePickerInput(
+        session,
+        "campaign",
+        choices = request_summ()$request_id
+      )
+    })
+    
     # PREPARE DATA =============================
     
     # prepare the data
@@ -174,10 +242,12 @@ mod_country_profile_server <- function(id, df_country_profile) {
     
     # filter the data for the selected country and date range
     country_df <- reactive({
+      date_range <- as.Date(input$time_period)
       prep_dat %>%
         filter(
           country_code == input$country,
-          between(date_start_d1, as.Date(input$time_period[1]), as.Date(input$time_period[2]))
+          between(date_start_d1, date_range[1], date_range[2]) |
+            between(date_start_d2, date_range[1], date_range[2])
         )
     })
     
@@ -204,16 +274,6 @@ mod_country_profile_server <- function(id, df_country_profile) {
     unique_admin <- reactive({
       req(nrow(country_df()) > 0)
       get_unique_admin(country_df())
-    })
-    
-    # OBSERVERS ================================
-    
-    observeEvent(country_df(), {
-      shinyWidgets::updatePickerInput(
-        session,
-        "campaign",
-        choices = request_summ()$request_id
-      )
     })
     
     # VALUE BOXES ==============================
@@ -295,7 +355,7 @@ mod_country_profile_server <- function(id, df_country_profile) {
           start = date_range[1] - 60,
           end = date_range[2] + 60
         ),
-        height = 380
+        height = 300
       )
     })
     
@@ -429,7 +489,7 @@ mod_country_profile_server <- function(id, df_country_profile) {
       
       leaflet::leafletProxy("map", session) %>%
         leaflet::clearGroup("Choropleth") %>%
-        leaflet::clearControls()
+        leaflet::removeControl("choro_leg")
       
       boundaries <- rv$sf
       req(nrow(isolate(boundaries)) > 0)
@@ -467,7 +527,8 @@ mod_country_profile_server <- function(id, df_country_profile) {
             values = boundaries[[cov_var]],
             position = "bottomright",
             opacity = .7,
-            group = "Choropleth"
+            group = "Choropleth",
+            layerId = "choro_leg"
           )
       } else {
         leaflet::leafletProxy("map", session) %>%
@@ -489,7 +550,8 @@ mod_country_profile_server <- function(id, df_country_profile) {
             values = boundaries[[last_round_var]],
             position = "bottomright",
             opacity = .7,
-            group = "Choropleth"
+            group = "Choropleth",
+            layerId = "choro_leg"
           )
       }
       
@@ -502,7 +564,7 @@ mod_country_profile_server <- function(id, df_country_profile) {
     
     observe({
       
-      if (isTruthy("Doses" %in% isolate(input$map_groups)) || minicharts_init())  {
+      if (isTruthy("Doses" %in% isolate(input$map_groups)) | minicharts_init())  {
         leaflet::leafletProxy("map", session) %>%
           leaflet.minicharts::clearMinicharts()
         
@@ -511,7 +573,7 @@ mod_country_profile_server <- function(id, df_country_profile) {
         req(nrow(isolate(boundaries)) > 0)
         n_dose <- paste0(input$dose_var, "_dose_adm")
         # circle width
-        pie_width <- 60 * sqrt(boundaries[[n_dose]]) / sqrt(max(boundaries[[n_dose]]))
+        pie_width <- (input$circle_size_mult * 10) * sqrt(boundaries[[n_dose]]) / sqrt(max(boundaries[[n_dose]]))
         
         leaflet::leafletProxy("map", session) %>%
           leaflet.minicharts::addMinicharts(
@@ -538,7 +600,7 @@ mod_country_profile_server <- function(id, df_country_profile) {
         #   width = 0
         # )
       }
-    }) %>% bindEvent(rv$sf, input$dose_var, rv$geo_name_col)
+    })  %>% bindEvent(rv$sf, input$dose_var, rv$geo_name_col, input$circle_size_mult)
     
     observeEvent(input$map_groups, {
       boundaries <- isolate(rv$sf)
@@ -555,7 +617,7 @@ mod_country_profile_server <- function(id, df_country_profile) {
       } else {
         req(nrow(isolate(boundaries)) > 0)
         n_dose <- paste0(input$dose_var, "_dose_adm")
-        pie_width <- 60 * sqrt(boundaries[[n_dose]]) / sqrt(max(boundaries[[n_dose]]))
+        pie_width <- (input$circle_size_mult * 10) * sqrt(boundaries[[n_dose]]) / sqrt(max(boundaries[[n_dose]]))
         leaflet::leafletProxy("map", session) %>%
           leaflet.minicharts::addMinicharts(
             lng = boundaries$lon,
@@ -593,8 +655,7 @@ mod_country_profile_server <- function(id, df_country_profile) {
         df_rt,
         highlight = TRUE,
         compact = TRUE,
-        pagination = FALSE, 
-        height = 400
+        pagination = FALSE
       )
     })
   })

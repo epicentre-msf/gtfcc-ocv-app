@@ -24,11 +24,9 @@ ui <- tagList(
     ),
     id = "tabs",
     window_title = app_title,
-    fillable = c("request", "timevis"),
     collapsible = TRUE,
     inverse = FALSE,
     position = "fixed-top",
-    # padding = c(50, 0, 0, 0),
     theme = bs_theme(
       base_font = font_google(
         app_font, 
