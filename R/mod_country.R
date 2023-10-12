@@ -461,77 +461,16 @@ mod_country_profile_server <- function(id, df_country_profile) {
       pie_width <- 60 * sqrt(boundaries[[n_dose]]) / sqrt(max(boundaries[[n_dose]]))
       
       leaflet::leafletProxy("map", session) %>%
-<<<<<<< HEAD
-        
-        leaflet::addPolygons(
-          data = boundaries,
-          fillColor = ~ cov_pal(boundaries[[cov_var]]),
-          fillOpacity = .7,
-          color = "black",
-          stroke = TRUE,
-          weight = 1,
-          label = boundaries[[rv$geo_name_col]],
-          group = "Coverage",
-          highlightOptions = leaflet::highlightOptions(bringToFront = TRUE, weight = 3),
-          options = leaflet::pathOptions(pane = "choropleth")
-          
-        ) %>%
-        
-        leaflet::addLegend(
-          title = "Dose coverage (%)",
-          data = boundaries,
-          pal = cov_pal,
-          values = ~ 0:100,
-          opacity = .7,
-          position = "bottomright",
-          group = "Coverage",
-          layerId = "cov_leg",
-          na.label = "No data"
-        ) %>% 
-        
-        leaflet::addPolygons(
-          data = boundaries,
-          fillColor = ~ last_round_pal(boundaries[[last_round_var]]),
-          fillOpacity = .7,
-          color = "black",
-          stroke = TRUE,
-          weight = 1,
-          label = boundaries[[rv$geo_name_col]],
-          group = "Last round",
-          highlightOptions = leaflet::highlightOptions(bringToFront = TRUE, weight = 3),
-          options = leaflet::pathOptions(pane = "choropleth")
-          
-        ) %>% 
-        
-        leaflet::addLegend(
-          title = "Time since last round",
-          data = boundaries,
-          pal = last_round_pal,
-          values = ~ last_round_cat,
-          opacity = .7,
-          position = "bottomright",
-          group = "Last round",
-          layerId = "last_round_leg",
-          na.label = "No data"
-        ) %>%  
-        
-=======
         leaflet.minicharts::clearMinicharts() %>% 
->>>>>>> dad30d741e0a73fdd84a7d7467459e5d63eaec72
         leaflet.minicharts::addMinicharts(
           lng = boundaries$lon,
           lat = boundaries$lat,
           chartdata = boundaries[[n_dose]], 
-<<<<<<< HEAD
           opacity = .9,
-          #fillColor = pal10[1],
-          #colorPalette = pal10,
-          legend = TRUE,x
-=======
+          legend = TRUE,
           layerId = boundaries[[isolate(rv$geo_name_col)]],
           opacity = .7,
           legend = TRUE,
->>>>>>> dad30d741e0a73fdd84a7d7467459e5d63eaec72
           showLabels = TRUE,
           type = "pie",
           width = pie_width
