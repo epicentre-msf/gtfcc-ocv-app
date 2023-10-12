@@ -49,7 +49,7 @@ mod_country_profile_ui <- function(id) {
         full_screen = TRUE,
         bslib::card_header(
           class = "d-flex justify-content-start align-items-center",
-          "Timeline"
+          "Campaign timeline"
         ),
         bslib::card_body(padding = 0, timevis::timevisOutput(ns("timevis")))
       ),
@@ -255,7 +255,8 @@ mod_country_profile_server <- function(id, df_country_profile) {
         options = list(
           start = date_range[1] - 60,
           end = date_range[2] + 60
-        )
+        ),
+        height = 380
       )
     })
 
@@ -373,7 +374,7 @@ mod_country_profile_server <- function(id, df_country_profile) {
         leaflet::addScaleBar(position = "bottomleft") %>%
         leaflet::addLayersControl(
           position = "topleft",
-          overlayGroups = c("Choropleth", "Circles", "Labels"),
+          overlayGroups = c("Choropleth", "Doses", "Labels"),
           options = layersControlOptions(collapsed = FALSE)
         )
         # leaflet.extras::addResetMapButton() %>%
@@ -389,7 +390,12 @@ mod_country_profile_server <- function(id, df_country_profile) {
 
       cov_var <- paste0("cov_", input$dose_var)
       last_round_var <- paste0(input$dose_var, "_datecat")
-
+      
+      tt <- get_tooltip(
+        df = boundaries,
+        admin = rv$geo_name_col_sym,
+        dose_type = input$dose_var
+      )
 
       # Call the color function
       cov_pal <- colorNumeric("YlOrRd", domain = boundaries[[cov_var]])
@@ -408,22 +414,17 @@ mod_country_profile_server <- function(id, df_country_profile) {
             color = "black",
             stroke = TRUE,
             weight = 1,
-            label = boundaries[[cov_var]], # boundaries[[rv$geo_name_col]],
+            label = tt, 
             group = "Choropleth",
             highlightOptions = leaflet::highlightOptions(bringToFront = TRUE, weight = 3),
             options = leaflet::pathOptions(pane = "choropleth")
           ) %>%
-          leaflegend::addLegendNumeric(
+          leaflet::addLegend(
             title = "Dose coverage",
             pal = cov_pal,
             values = boundaries[[cov_var]],
             position = "bottomright",
-            orientation = "vertical",
-            shape = "stadium",
-            decreasing = TRUE,
-            height = 100,
-            width = 20,
-            fillOpacity = .7,
+            opacity = .7,
             group = "Choropleth"
           )
       } else {
@@ -435,86 +436,120 @@ mod_country_profile_server <- function(id, df_country_profile) {
             color = "black",
             stroke = TRUE,
             weight = 1,
-            label = boundaries[[last_round_var]], # boundaries[[rv$geo_name_col]],
+            label = tt,
             group = "Choropleth",
             highlightOptions = leaflet::highlightOptions(bringToFront = TRUE, weight = 3),
             options = leaflet::pathOptions(pane = "choropleth")
           ) %>%
-          leaflegend::addLegendFactor(
+          leaflet::addLegend(
             title = "Time since last round",
             pal = last_round_pal,
             values = boundaries[[last_round_var]],
             position = "bottomright",
-            width = 25,
-            height = 25,
-            shape = "rect",
-            group = "Choropleth",
-            opacity = .7
+            opacity = .7,
+            group = "Choropleth"
           )
       }
-    })
-
-    observe({
-      boundaries <- rv$sf
+      
       bbox <- sf::st_bbox(boundaries)
-      n_dose <- paste0(input$dose_var, "_dose_adm")
-      # circle width
-      pie_width <- 60 * sqrt(boundaries[[n_dose]]) / sqrt(max(boundaries[[n_dose]]))
-
       leaflet::leafletProxy("map", session) %>%
-        leaflet.minicharts::clearMinicharts() %>%
-        leaflet.minicharts::addMinicharts(
-          lng = boundaries$lon,
-          lat = boundaries$lat,
-          chartdata = boundaries[[n_dose]],
-          legend = TRUE,
-          layerId = boundaries[[isolate(rv$geo_name_col)]],
-          opacity = .7,
-          showLabels = TRUE,
-          type = "pie",
-          width = pie_width
-        ) %>%
         leaflet::flyToBounds(bbox[["xmin"]], bbox[["ymin"]], bbox[["xmax"]], bbox[["ymax"]])
     })
+    
+    minicharts_init <- reactiveVal(TRUE)
 
-    observeEvent(input$map_groups, {
-      boundaries <- isolate(rv$sf)
-      if (!"Circles" %in% input$map_groups) {
-        leaflet::leafletProxy("map", session) %>%
-          leaflet.minicharts::updateMinicharts(
-            layerId = boundaries[[isolate(rv$geo_name_col)]],
-            chartdata = 1,
-            showLabels = FALSE,
-            height = 0,
-            width = 0
-          )
-      } else {
+    observe({
+      # browser()
+      # req(isolate(input$map_groups))
+      
+      if (isTruthy("Doses" %in% isolate(input$map_groups)) || minicharts_init())  {
+        boundaries <- rv$sf
         n_dose <- paste0(input$dose_var, "_dose_adm")
+        # circle width
         pie_width <- 60 * sqrt(boundaries[[n_dose]]) / sqrt(max(boundaries[[n_dose]]))
+        
         leaflet::leafletProxy("map", session) %>%
-          leaflet.minicharts::updateMinicharts(
-            layerId = boundaries[[isolate(rv$geo_name_col)]],
+          leaflet.minicharts::clearMinicharts() %>%
+          leaflet.minicharts::addMinicharts(
+            lng = boundaries$lon,
+            lat = boundaries$lat,
             chartdata = boundaries[[n_dose]],
+            legend = TRUE,
+            layerId = boundaries[[isolate(rv$geo_name_col)]],
             opacity = .7,
             showLabels = TRUE,
             type = "pie",
             width = pie_width
           )
+        
+        minicharts_init(FALSE)
+      } else {
+        leaflet::leafletProxy("map", session) %>%
+          leaflet.minicharts::clearMinicharts()
+          # leaflet.minicharts::updateMinicharts(
+          #   layerId = boundaries[[isolate(rv$geo_name_col)]],
+          #   chartdata = 1,
+          #   showLabels = FALSE,
+          #   height = 0,
+          #   width = 0
+          # )
+      }
+    }) %>% bindEvent(rv$sf, input$dose_var, rv$geo_name_col)
+
+    observeEvent(input$map_groups, {
+      boundaries <- isolate(rv$sf)
+      if (!"Doses" %in% input$map_groups) {
+        leaflet::leafletProxy("map", session) %>%
+          leaflet.minicharts::clearMinicharts() 
+          # leaflet.minicharts::updateMinicharts(
+          #   layerId = boundaries[[isolate(rv$geo_name_col)]],
+          #   chartdata = 1,
+          #   showLabels = FALSE,
+          #   height = 0,
+          #   width = 0
+          # )
+      } else {
+        n_dose <- paste0(input$dose_var, "_dose_adm")
+        pie_width <- 60 * sqrt(boundaries[[n_dose]]) / sqrt(max(boundaries[[n_dose]]))
+        leaflet::leafletProxy("map", session) %>%
+          leaflet.minicharts::addMinicharts(
+            lng = boundaries$lon,
+            lat = boundaries$lat,
+            chartdata = boundaries[[n_dose]],
+            legend = TRUE,
+            layerId = boundaries[[isolate(rv$geo_name_col)]],
+            opacity = .7,
+            showLabels = TRUE,
+            type = "pie",
+            width = pie_width
+          )
+          # leaflet.minicharts::updateMinicharts(
+          #   layerId = boundaries[[isolate(rv$geo_name_col)]],
+          #   chartdata = boundaries[[n_dose]],
+          #   opacity = .7,
+          #   showLabels = TRUE,
+          #   type = "pie",
+          #   width = pie_width
+          # )
       }
     })
 
     # TABLE
     output$tbl <- reactable::renderReactable({
       if (length(input$campaign)) {
-        request_summ() %>% 
+        df_rt <- request_summ() %>% 
           filter(request_id %in% input$campaign) %>% 
-          summ_tab_data() %>%
-          reactable(pagination = FALSE, height = 400)
+          summ_tab_data()
       } else {
-        request_summ() %>% 
-          summ_tab_data() %>% 
-          reactable(pagination = FALSE, height = 400)
+        df_rt <- request_summ() %>% summ_tab_data()
       }
+      reactable(
+        df_rt,
+        highlight = TRUE,
+        compact = TRUE,
+        pagination = FALSE, 
+        height = 400
+      )
     })
   })
 }
@@ -676,9 +711,11 @@ get_map_data <- function(country_df, filter_var, admin_level) {
   n_rounds <- unique(country_df$n_rounds)
 
   admin_sym <- sym(paste0(admin_level, "_name"))
+  
+  # browser()
 
   df <- country_df %>%
-    group_by(request_id, !!admin_sym)
+    group_by(!!admin_sym)
 
   if (filter_var == "largest_pop") {
     df <- df %>% filter(target_pop == max(target_pop))
@@ -689,6 +726,7 @@ get_map_data <- function(country_df, filter_var, admin_level) {
   }
 
   df %>%
+    group_by(request_id, !!admin_sym) %>% 
     summarise(
       n_targets = n(),
       date_start_d1 = min(date_start_d1),
@@ -709,7 +747,6 @@ get_map_data <- function(country_df, filter_var, admin_level) {
       ),
       .groups = "drop"
     ) %>%
-    ungroup() %>%
     mutate(
       cov_d1 = round(digits = 1, d1_dose_adm / target_pop * 100),
       cov_d2 = round(digits = 1, d2_dose_adm / target_pop * 100),
@@ -731,3 +768,17 @@ get_map_data <- function(country_df, filter_var, admin_level) {
 # define variables
 bar_var <- c("Doses counts" = "n", "Coverage" = "cov")
 last_round_cat <- c("0-6 months", "6m-1 year", "1-3 year", "more than 3 years")
+
+get_tooltip <- function(df, admin, dose_type) {
+  n_dose <- paste0(dose_type, "_dose_adm") 
+  dose_cov <- paste0("cov_", dose_type) 
+  lastround_var <- paste0(dose_type, "_datecat")
+  
+  glue::glue(
+    "<b>{df[[admin]]}</b><br>
+       Last round: <b>{ df[[lastround_var]] }</b><br>
+       Target population: <b>{fmt_n_dose(df$target_pop)}</b><br>
+       Dose administered: <b>{ fmt_n_dose(df[[n_dose]]) }</b><br>
+       Dose coverage: <b>{fmt_n_dose(df[[dose_cov]])} %</b><br>"
+  ) %>% purrr::map(htmltools::HTML)
+}
