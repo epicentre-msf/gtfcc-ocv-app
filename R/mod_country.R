@@ -33,6 +33,7 @@ mod_country_profile_ui <- function(id) {
         choices = c("Cameroon" = "CMR"),
         options = picker_opts(style = "btn-lg btn-outline-success")
       ),
+      
       shiny::sliderInput(
         inputId = ns("time_period"),
         label = tags$h5("Time period"),
@@ -43,34 +44,53 @@ mod_country_profile_ui <- function(id) {
         timeFormat = "%d/%m/%y"
       )
     ),
+    
+    
     bslib::layout_column_wrap(
-      width = 1 / 3,
+      width = 1 / 5,
       fill = FALSE,
       bslib::value_box(
-        title = "Campaigns",
-        value = textOutput(ns("n_campaigns")),
-        htmlOutput(ns("campaigns_info")),
+        title = "Campaigns displayed",
+        value = textOutput(ns("camp_displayed")),
+        htmlOutput(ns("camp_displayed_info")),
         theme_color = "success",
         # showcase = health_icon("symbols/cholera", type = "outline", height = 80),
         showcase = bs_icon("droplet")
       ),
       bslib::value_box(
-        title = "Doses",
-        value = textOutput(ns("n_doses")),
-        textOutput(ns("doses_info")),
+        title = "Reactive campaigns",
+        value = textOutput(ns("react_camp")),
+        htmlOutput(ns("react_camp_info")),
         theme_color = "success",
-        # showcase = health_icon("medications/pills_2", type = "outline", height = 80)
-        showcase = bs_icon("prescription2")
+        # showcase = health_icon("symbols/cholera", type = "outline", height = 80),
+        showcase = bs_icon("droplet")
+      ),
+      bslib::value_box(
+        title = "Doses distributed",
+        value = textOutput(ns("dose_admi")),
+        htmlOutput(ns("dose_admi_info")),
+        theme_color = "success",
+        # showcase = health_icon("symbols/cholera", type = "outline", height = 80),
+        showcase = bs_icon("droplet")
       ),
       bslib::value_box(
         title = "Targeted areas",
-        value = textOutput(ns("n_areas")),
-        htmlOutput(ns("areas_info")),
+        value = textOutput(ns("target_areas")),
+        htmlOutput(ns("target_areas_info")),
         theme_color = "success",
         # showcase = health_icon("symbols/geo_location", type = "outline", height = 80)
         showcase = bs_icon("geo")
+      ), 
+      bslib::value_box(
+        title = "Last campaign",
+        value = textOutput(ns("last_camp")),
+        textOutput(ns("last_camp_info")),
+        theme_color = "success",
+        # showcase = health_icon("medications/pills_2", type = "outline", height = 80)
+        showcase = bs_icon("prescription2")
       )
     ),
+    
     bslib::layout_columns(
       col_widths = c(6, 6, 6, 6),
       bslib::card(
@@ -181,6 +201,13 @@ mod_country_profile_server <- function(id, df_country_profile) {
         )
     })
     
+    #filter the admin dict for country 
+    admin_country <- reactive({ 
+      admin_dict %>% filter(adm0_iso3 == input$country) %>%  select(c(adm1_level, adm2_level, adm3_level)) 
+    }) 
+    
+    admin_label <- reactive({unlist(admin_country()[1,])})
+    
     # summarise the campaigns (using request id) for the country df
     request_summ <- reactive({
       req(nrow(country_df()) > 0)
@@ -218,40 +245,78 @@ mod_country_profile_server <- function(id, df_country_profile) {
     
     # VALUE BOXES ==============================
     
-    output$n_campaigns <- renderText({
-      get_rounds_summ(request_summ())
+    rounds_summ <- reactive({ get_rounds_summ(request_summ()) })
+    
+    output$camp_displayed <- renderText({
       glue::glue("{nrow(request_summ())}")
     })
     
-    output$campaigns_info <- renderUI({
-      get_rounds_summ(request_summ())
-      HTML(glue::glue(
-        "{fmt_count(request_summ(), campaign_type == 'Reactive')} reactive campaigns</br>
-         {fmt_count(request_summ(), n_rounds == 'single dose')} single dose campaigns"
-      ))
+    output$camp_displayed_info <- renderText({
+
+            n_req_country <- reactive({ nrow(app_data$request %>% filter(iso_a3 == input$country, r_status == "Approved")) })
+      
+      percent_lab <- scales::percent( nrow(request_summ()) /n_req_country(), accuracy = 1)
+      
+      glue::glue("out of {n_req_country()} ({percent_lab}) due to missing data")
+      
     })
     
-    output$n_doses <- renderText({
-      get_rounds_summ(request_summ())
+    output$react_camp <- renderText({
+      glue::glue( "{fmt_count(request_summ(), campaign_type == 'Reactive')}" )
+    })
+    
+    output$react_camp_info <- renderText({
+      glue::glue( "{fmt_count(request_summ(), n_rounds == 'single dose')} single dose campaigns" )
+    })
+    
+    output$dose_admi <- renderText({
       glue::glue("{fmt_n_dose(sum(request_summ()$total_doses))}")
     })
     
-    output$doses_info <- renderText({
-      get_rounds_summ(request_summ())
-      glue::glue("{fmt_n_dose( sum(request_summ()$n_d1) )} first doses")
+    output$dose_admi_info <- renderText({
+      
+      n <- sum(request_summ()$n_d2)
+      percent_dose <- n/sum(request_summ()$total_doses)
+      percent_lab <- scales::percent(percent_dose, accuracy = 1)
+      
+      glue::glue("{fmt_n_dose(n)} ({percent_lab}) second doses")
     })
     
-    output$n_areas <- renderText({
-      get_rounds_summ(request_summ())
-      glue::glue("{unique_admin()$unique_adm3} admin 3")
+    output$target_areas <- renderText({
+      admin_label <- admin_label()[[2]]
+      glue::glue("{unique_admin()$unique_adm2} {admin_label}s")
     })
     
-    output$areas_info <- renderUI({
-      get_rounds_summ(request_summ())
-      HTML(glue::glue(
-        "{unique_admin()$unique_adm2} admin 2</br>
-         {unique_admin()$unique_adm1} admin 1"
-      ))
+    output$target_areas_info <- renderText({
+      admin_label <- admin_label()[[1]]
+      glue::glue("in {unique_admin()$unique_adm1} {admin_label}s")
+    })
+    
+    output$last_camp <- renderText({
+      
+      date_var <- if( latest_camp()$n_rounds == "two doses" ) { sym("date_end_d2") } else { sym("date_end_d1") }
+      
+      date_end <- latest_camp() %>% pull(!!date_var)
+      
+      length <- time_length(lubridate::interval(date_end, Sys.Date()), "days")
+      
+      length_cat  <- case_when(
+        length < 180 ~ "0-6 months ago",
+        length >= 180 & length < 365 ~ "6m-1 year ago",
+        length >= 365 & length < 1080 ~ "1-3 year ago",
+        length >= 1080 ~ "more than 3 years ago" ) 
+      
+      glue::glue("{length_cat}")
+      
+    })
+    
+    output$last_camp_info <- renderText({
+      
+      n_var <- if( latest_camp()$n_rounds == "two doses" ) { sym("n_d2") } else { sym("n_d1") }
+      n_label <- if(n_var == "n_d2") { "second"} else { "first" }
+      
+      glue::glue("{ fmt_n_dose( latest_camp() %>% pull(!!n_var) ) } {n_label} doses ")
+      
     })
     
     # TIMEVIS/BARCHART ==========================
