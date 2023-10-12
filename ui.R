@@ -1,6 +1,6 @@
 ui <- tagList(
   tags$head(
-    tags$style(".value-box-area {padding: 5px !important;}"),
+    tags$style(".value-box-area {padding: 5px !important;} .card-body {padding: 0 !important;}"),
     # tags$link(href = google_font(p_font), rel = "stylesheet"),
     tags$style(
       HTML(glue::glue("p {{font-family: '{app_font}';}}"))

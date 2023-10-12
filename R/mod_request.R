@@ -157,7 +157,7 @@ mod_request_ui <- function(id) {
       card(
         full_screen = TRUE,
         card_header(
-          class = "d-flex mb-3 align-items-center",
+          class = "d-flex align-items-center",
           tags$span(class = "me-auto pe-1", shiny::icon("chart-column"), "Time-series"),
           
           div(class = "pe-1", shinyWidgets::radioGroupButtons(
