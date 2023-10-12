@@ -42,19 +42,19 @@ geo_data <- list(
     level_name = "Admin 1",
     sf = read_rds(here::here("data", "cmr_adm1.rds")),
     name_var = "adm1_name",
-    join_by = c("adm1_name" = "adm1_name")
+    join_by = c("pcode" = "adm1_pcode")
   ),
   "adm2" = list(
     level_name = "Admin 2",
     sf =  read_rds(here::here("data", "cmr_adm2.rds")),
     name_var = "adm2_name",
-    join_by = c("adm2_name" = "adm2_name")
+    join_by = c("pcode" = "adm2_pcode")
   ),
   "adm3" = list(
     level_name = "Admin 3",
     sf = readr::read_rds(here::here("data", "cmr_adm3.rds")),
     name_var = "adm3_name",
-    join_by = c("adm3_name" = "adm3_name")
+    join_by = c("pcode" = "adm3_pcode")
   )
 )
 

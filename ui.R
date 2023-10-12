@@ -1,6 +1,9 @@
 ui <- tagList(
   tags$head(
-    tags$style(".value-box-area {padding: 5px !important;} .card-body {padding: 0 !important;}"),
+    tags$style(
+      # body {padding-top: 70px !important;} 
+      "body {padding-top: 50px !important;} .value-box-area {padding: 5px !important;} .card-body {padding: 0 !important;}"
+    ),
     # tags$link(href = google_font(p_font), rel = "stylesheet"),
     tags$style(
       HTML(glue::glue("p {{font-family: '{app_font}';}}"))
@@ -21,10 +24,11 @@ ui <- tagList(
     ),
     id = "tabs",
     window_title = app_title,
-    fillable = TRUE,
+    fillable = c("request", "timevis"),
     collapsible = TRUE,
     inverse = FALSE,
-    padding = 0,
+    position = "fixed-top",
+    # padding = c(50, 0, 0, 0),
     theme = bs_theme(
       base_font = font_google(
         app_font, 
