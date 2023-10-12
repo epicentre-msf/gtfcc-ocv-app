@@ -79,53 +79,60 @@ mod_country_profile_ui <- function(id) {
       bslib::card(
         bslib::card_header(
           class = "d-flex justify-content-between align-items-center",
-          "Map", 
+          "Map",
           
-          div(class = "pe-1", 
-              shinyWidgets::pickerInput(
-                ns("campaign"),
-                label = "Select a campaign",
-                choices = NULL,
-                options = picker_opts(actions = FALSE, search = FALSE),
-                width = 100,
-                multiple = TRUE
-              )), 
-          
-          div(class = "pe-1", 
-              shinyWidgets::pickerInput(
-                ns("admin_level"),
-                label = "Admin level",
-                choices = c("Admin 1" = "adm1", "Admin 2" = "adm2", "Admin 3" = "adm3"),
-                options = picker_opts(actions = FALSE, search = FALSE),
-                width = 100,
-                selected = "adm1",
-                multiple = FALSE
-              )),
-          
-          div(class = "pe-1", 
-              shinyWidgets::pickerInput(
-                ns("choro_var"),
-                label = "Display variable",
-                choices = c("Doses 1" = "d1", "Doses 2" = "d2"),
-                options = picker_opts(actions = FALSE, search = FALSE),
-                width = 100,
-                selected = "d1",
-                multiple = FALSE
-              )),
-          
-          div(class = "pe-1", 
-              shinyWidgets::pickerInput(
-                ns("map_agg"),
-                label = "Aggregating rule",
-                choices = c("Latest campaign" = "latest_date", "Greatest target population" = "largest_pop"),
-                options = picker_opts(actions = FALSE, search = FALSE),
-                width = 100,
-                selected = "latest_date",
-                multiple = FALSE
-              ))
+          bslib::popover(
+            tags$span(bs_icon("gear"), "options"),
+            title = "Map options",
+            placement = "left",
+            
+            shinyWidgets::pickerInput(
+              ns("campaign"),
+              label = "Select a campaign",
+              choices = NULL,
+              options = picker_opts(actions = FALSE, search = FALSE),
+              width = 100,
+              multiple = TRUE
+            ), 
+            
+            shinyWidgets::radioGroupButtons(
+              ns("admin_level"),
+              label = "Admin level",
+              choices = c("1" = "adm1", "2" = "adm2", "3" = "adm3"),
+              size = "sm",
+              status = "outline-success"
+            ),
+            
+            shinyWidgets::radioGroupButtons(
+              ns("choro_var"),
+              label = "Colour variable",
+              choices = c("Coverage", "Last round"),
+              size = "sm",
+              status = "outline-success"
+            ),
+            
+            shinyWidgets::radioGroupButtons(
+              ns("dose_var"),
+              label = "Circles variable",
+              choices = c("Dose 1" = "d1", "Dose 2" = "d2"),
+              size = "sm",
+              status = "outline-success"
+            ),
+            
+            
+            shinyWidgets::pickerInput(
+              ns("map_agg"),
+              label = "Aggregating rule",
+              choices = c("Latest campaign" = "latest_date", "Greatest target population" = "largest_pop"),
+              options = picker_opts(actions = FALSE, search = FALSE),
+              width = 100,
+              selected = "latest_date",
+              multiple = FALSE
+            )
+          )
         ),
         
-        bslib::card_body(leaflet::leafletOutput(ns("map")))
+        bslib::card_body(padding = 0, leaflet::leafletOutput(ns("map")))
         
       ),
       
@@ -360,9 +367,9 @@ mod_country_profile_server <- function(id, df_country_profile) {
         leaflet.extras::addFullscreenControl(position = "topleft") %>%
         leaflet.extras::addResetMapButton() %>% 
         leaflet::addLayersControl(
-          baseGroups = c("Coverage", "Last round"),
-          options = layersControlOptions(collapsed = FALSE),
-          overlayGroups = c("Labels", "Doses")
+          # baseGroups = c("Coverage", "Last round"),
+          overlayGroups = c("Choropleth", "Circles", "Labels"),
+          options = layersControlOptions(collapsed = FALSE)
         )
       
     })
@@ -370,36 +377,91 @@ mod_country_profile_server <- function(id, df_country_profile) {
     #Observe the map 
     observe({
       
-      req(input$map_groups)
+      # req(map_df(), rv$sf, input$dose_var)
       
       boundaries <- rv$sf
       
-      cov_var <- paste0("cov_", input$choro_var)
-      last_round_var <- paste0(input$choro_var, "_datecat")
-      
-      n_dose <- paste0(input$choro_var, "_dose_adm")
-      
-      #circle width
-      pie_width <- 60 * sqrt(boundaries[[n_dose]]) / sqrt(max(boundaries[[n_dose]]))
+      cov_var <- paste0("cov_", input$dose_var)
+      last_round_var <- paste0(input$dose_var, "_datecat")
       
       
       # Call the color function 
-      cov_pal <- colorNumeric("YlOrRd",  domain = 0:100 )
-      last_round_pal <- colorFactor("YlOrRd", domain = last_round_cat )
+      cov_pal <- colorNumeric("YlOrRd",  domain = boundaries[[cov_var]])
+      last_round_pal <- colorFactor("Dark2", domain = last_round_cat )
       
       leaflet::leafletProxy("map", session) %>%
         
-        leaflet::clearGroup("Coverage") %>% 
+        leaflet::clearGroup("Choropleth") %>% 
         
-        leaflet::clearGroup("Last round") %>% 
-        
-        leaflet.minicharts::clearMinicharts()
+        leaflet::clearControls()
       
-      req(nrow(boundaries) > 0)
+      # req(nrow(boundaries) > 0)
       
+      if (input$choro_var == "Coverage") {
+        leaflet::leafletProxy("map", session) %>%
+          leaflet::addPolygons(
+            data = boundaries,
+            fillColor = ~ cov_pal(boundaries[[cov_var]]),
+            fillOpacity = .7,
+            color = "black",
+            stroke = TRUE,
+            weight = 1,
+            label = boundaries[[cov_var]], # boundaries[[rv$geo_name_col]],
+            group = "Choropleth",
+            highlightOptions = leaflet::highlightOptions(bringToFront = TRUE, weight = 3),
+            options = leaflet::pathOptions(pane = "choropleth")
+          ) %>%
+          leaflegend::addLegendNumeric(
+            title = "Dose coverage",
+            pal = cov_pal,
+            values = boundaries[[cov_var]],
+            position = 'bottomright',
+            orientation = 'vertical',
+            shape = 'stadium',
+            decreasing = TRUE,
+            height = 100,
+            width = 20,
+            fillOpacity = .7,
+            group = "Choropleth"
+          ) 
+      } else {
+        leaflet::leafletProxy("map", session) %>%
+          leaflet::addPolygons(
+            data = boundaries,
+            fillColor = ~ last_round_pal(boundaries[[last_round_var]]),
+            fillOpacity = .7,
+            color = "black",
+            stroke = TRUE,
+            weight = 1,
+            label = boundaries[[last_round_var]], # boundaries[[rv$geo_name_col]],
+            group = "Choropleth",
+            highlightOptions = leaflet::highlightOptions(bringToFront = TRUE, weight = 3),
+            options = leaflet::pathOptions(pane = "choropleth")
+          ) %>% 
+          leaflegend::addLegendFactor(
+            title = "Time since last round",
+            pal = last_round_pal,
+            values = boundaries[[last_round_var]],
+            position = 'bottomright',
+            width = 25,
+            height = 25,
+            shape = "rect",
+            group = "Choropleth",
+            opacity = .7
+          )
+      }
+      
+    })
+    
+    observe({
+      boundaries <- rv$sf
       bbox <- sf::st_bbox(boundaries)
+      n_dose <- paste0(input$dose_var, "_dose_adm")
+      #circle width
+      pie_width <- 60 * sqrt(boundaries[[n_dose]]) / sqrt(max(boundaries[[n_dose]]))
       
       leaflet::leafletProxy("map", session) %>%
+<<<<<<< HEAD
         
         leaflet::addPolygons(
           data = boundaries,
@@ -408,7 +470,7 @@ mod_country_profile_server <- function(id, df_country_profile) {
           color = "black",
           stroke = TRUE,
           weight = 1,
-          label = boundaries[[cov_var]], # boundaries[[rv$geo_name_col]],
+          label = boundaries[[rv$geo_name_col]],
           group = "Coverage",
           highlightOptions = leaflet::highlightOptions(bringToFront = TRUE, weight = 3),
           options = leaflet::pathOptions(pane = "choropleth")
@@ -416,7 +478,7 @@ mod_country_profile_server <- function(id, df_country_profile) {
         ) %>%
         
         leaflet::addLegend(
-          title = "Dose coverage",
+          title = "Dose coverage (%)",
           data = boundaries,
           pal = cov_pal,
           values = ~ 0:100,
@@ -434,7 +496,7 @@ mod_country_profile_server <- function(id, df_country_profile) {
           color = "black",
           stroke = TRUE,
           weight = 1,
-          label = boundaries[[last_round_var]], # boundaries[[rv$geo_name_col]],
+          label = boundaries[[rv$geo_name_col]],
           group = "Last round",
           highlightOptions = leaflet::highlightOptions(bringToFront = TRUE, weight = 3),
           options = leaflet::pathOptions(pane = "choropleth")
@@ -453,52 +515,55 @@ mod_country_profile_server <- function(id, df_country_profile) {
           na.label = "No data"
         ) %>%  
         
+=======
+        leaflet.minicharts::clearMinicharts() %>% 
+>>>>>>> dad30d741e0a73fdd84a7d7467459e5d63eaec72
         leaflet.minicharts::addMinicharts(
-          
           lng = boundaries$lon,
           lat = boundaries$lat,
           chartdata = boundaries[[n_dose]], 
+<<<<<<< HEAD
           opacity = .9,
           #fillColor = pal10[1],
           #colorPalette = pal10,
+          legend = TRUE,x
+=======
+          layerId = boundaries[[isolate(rv$geo_name_col)]],
+          opacity = .7,
           legend = TRUE,
+>>>>>>> dad30d741e0a73fdd84a7d7467459e5d63eaec72
           showLabels = TRUE,
           type = "pie",
           width = pie_width
-          
         ) %>% 
-        
-        
         leaflet::flyToBounds(bbox[["xmin"]], bbox[["ymin"]], bbox[["xmax"]], bbox[["ymax"]])
-      
     })
     
-    
-    observe({
-      
-      if("Coverage" %in% input$map_groups ){
-        
+    observeEvent(input$map_groups, {
+      boundaries <- isolate(rv$sf)
+      if (!"Circles" %in% input$map_groups) {
         leaflet::leafletProxy("map", session) %>%
-          
-          leaflet::removeControl("last_round_leg")
-        
-      } else if("Last round" %in% input$map_groups) {
-        
+          leaflet.minicharts::updateMinicharts(
+            layerId = boundaries[[isolate(rv$geo_name_col)]],
+            chartdata = 1,
+            showLabels = FALSE,
+            height = 0,
+            width = 0
+          )
+      } else {
+        n_dose <- paste0(input$dose_var, "_dose_adm")
+        pie_width <- 60 * sqrt(boundaries[[n_dose]]) / sqrt(max(boundaries[[n_dose]]))
         leaflet::leafletProxy("map", session) %>%
-          
-          leaflet::removeControl("cov_leg")
-      } 
-      
-      if(!"Doses" %in% input$map_groups){
-        
-        leaflet::leafletProxy("map", session) %>%
-          leaflet.minicharts::clearMinicharts()
-        
+          leaflet.minicharts::updateMinicharts(
+            layerId = boundaries[[isolate(rv$geo_name_col)]],
+            chartdata = boundaries[[n_dose]],
+            opacity = .7,
+            showLabels = TRUE,
+            type = "pie",
+            width = pie_width
+          )
       }
-      
-    }
-    )
-    
+    })
     
     
     #TABLE
@@ -678,9 +743,7 @@ summ_tab_data <- function(df) {
       "Total doses" = total_doses,
       
       -c(country_name, date_start_d1, date_end_d1, date_start_d2, date_end_d2, contains("n_adm"))
-      
-      
-      
+    
     ) %>% 
     
     t() %>%
