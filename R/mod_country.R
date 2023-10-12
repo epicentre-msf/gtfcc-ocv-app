@@ -466,11 +466,9 @@ mod_country_profile_server <- function(id, df_country_profile) {
           lng = boundaries$lon,
           lat = boundaries$lat,
           chartdata = boundaries[[n_dose]], 
-          opacity = .9,
           legend = TRUE,
           layerId = boundaries[[isolate(rv$geo_name_col)]],
           opacity = .7,
-          legend = TRUE,
           showLabels = TRUE,
           type = "pie",
           width = pie_width
