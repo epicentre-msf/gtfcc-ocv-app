@@ -58,6 +58,9 @@ geo_data <- list(
   )
 )
 
+#load admin_level dict
+admin_dict <- read_rds(here::here("data", "admin_dict.rds"))
+
 app_data <- readr::read_rds(here::here("data", "app_data.rds"))
 df_request <- app_data$request
 df_round <- app_data$campaign_and_round

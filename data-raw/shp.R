@@ -32,7 +32,11 @@ adm1 <- get_admin_level(obt_gb_path, "CMR", "ADM1")
 adm2 <- get_admin_level(obt_gb_path, "CMR", "ADM2")
 adm3 <- get_admin_level(obt_gb_path, "CMR", "ADM3")
 
-
 saveRDS(adm1, here::here("data", "cmr_adm1.rds"))
 saveRDS(adm2, here::here("data", "cmr_adm2.rds"))
 saveRDS(adm3, here::here("data", "cmr_adm3.rds"))
+
+#import admin_level dictionnary 
+admin_dict <- readxl::read_xlsx(here::here(obt_gb_path, "dict_Admin_level.xlsx"))
+
+saveRDS(admin_dict, here::here("data", "admin_dict.rds"))

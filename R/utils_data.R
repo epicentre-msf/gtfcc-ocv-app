@@ -40,7 +40,7 @@ fmt_count <- function(x, ...) {
   f <- dplyr::filter(dplyr::as_tibble(x), ...)
   f <- dplyr::count(f)
   prop <- f$n/nrow(x)
-  sprintf("%d (%s)", f$n, scales::percent(prop, accuracy = 0.1))
+  sprintf("%d (%s)", f$n, scales::percent(prop, accuracy = 1))
 }
 
 fmt_n_dose <- function(n) {
