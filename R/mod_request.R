@@ -1,7 +1,7 @@
 
 mod_request_ui <- function(id) {
   ns <- NS(id)
-
+  
   bslib::layout_sidebar(
     border = FALSE,
     fillable = FALSE,
@@ -108,7 +108,7 @@ mod_request_ui <- function(id) {
         )
       )
     ),
-
+    
     # Geo tabs ==============================================
     navset_card_tab(
       full_screen = TRUE,
@@ -143,7 +143,7 @@ mod_request_ui <- function(id) {
     ),
     layout_column_wrap(
       width = "500px",
-
+      
       # Time series ==============================================
       card(
         full_screen = TRUE,
@@ -167,7 +167,7 @@ mod_request_ui <- function(id) {
             width = 150,
             multiple = FALSE
           ))
-
+          
           # class = "d-flex justify-content-between align-items-center",
           # tags$span(
           #   shiny::icon("chart-column"),
@@ -205,7 +205,7 @@ mod_request_ui <- function(id) {
           highcharter::highchartOutput(ns("ts_chart"))
         )
       ),
-
+      
       # Delay tabs ==============================================
       navset_card_tab(
         full_screen = TRUE,
@@ -240,7 +240,7 @@ mod_request_ui <- function(id) {
               status = "outline-success"
             )
           )
-
+          
           # div(class="pe-1", shinyWidgets::pickerInput(
           #   ns("date_1"),
           #   label = NULL,
@@ -283,11 +283,11 @@ mod_request_ui <- function(id) {
           value = "table",
           gt::gt_output(ns("delay_tbl"))
         )
-
+        
         # footer = card_footer("Delays are calculated on ICG data only.")
       )
     ),
-
+    
     # Request timeline ==============================================
     card(
       class = "my-3",
@@ -318,24 +318,24 @@ mod_request_ui <- function(id) {
 mod_request_server <- function(id) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
-
+    
     output$geo_select <- renderPrint({
       input$geo
     })
-
+    
     # ==========================================================================
     # OBSERVERS
     # ==========================================================================
-
+    
     observeEvent(input$reset, {
       shinyjs::reset("resetable_filters")
     })
-
+    
     observeEvent(input$var, {
       cond <- (input$var == "Doses")
       shinyjs::toggle("dose", condition = cond, anim = TRUE, animType = "fade")
     })
-
+    
     observe({
       ts_date_selected <- isolate(input$ts_date)
       if (input$var == "Doses" & input$dose == "s_dose_ship") {
@@ -361,7 +361,7 @@ mod_request_server <- function(id) {
         )
       }
     })
-
+    
     var_lab <- reactive({
       lab <- paste("Number of", tolower(input$var))
       if (input$var == "Doses") {
@@ -369,7 +369,7 @@ mod_request_server <- function(id) {
       }
       lab
     })
-
+    
     output$map_title <- renderUI({
       tags$span(
         class = "pe-2",
@@ -377,11 +377,11 @@ mod_request_server <- function(id) {
         stringr::str_replace(var_lab(), "Number", "Map")
       )
     })
-
+    
     # ==========================================================================
     # DATA PREP
     # ==========================================================================
-
+    
     observe({
       if (length(input$region)) {
         countries <- df_request %>%
@@ -399,16 +399,16 @@ mod_request_server <- function(id) {
         shinyWidgets::updatePickerInput(session, "country", choices = countries, selected = selected)
       }
     })
-
+    
     geo_select <- reactiveVal("World")
     observeEvent(input$geo, {
       geo_select(input$geo)
     })
-
+    
     df_data <- reactive({
       df <- df_request %>%
         filter(quarter >= input$q_range[1], quarter <= input$q_range[2])
-
+      
       # if (length(input$geo)) df %<>% filter_geo(input$geo)
       if (length(input$region)) df %<>% filter(r_who_region %in% input$region)
       if (length(input$country)) df %<>% filter(r_country %in% input$country)
@@ -423,14 +423,14 @@ mod_request_server <- function(id) {
           distinct(r_demand_id = s_r_demand_id)
         df %<>% semi_join(vacc_filter, by = "r_demand_id")
       }
-
+      
       return(df)
     }) %>% bindEvent(input$go, ignoreInit = FALSE, ignoreNULL = FALSE)
-
+    
     # ==========================================================================
     # VALUE BOXES
     # ==========================================================================
-
+    
     df_summary <- reactive({
       df <- df_data()
       # if (!is.null(country_select())) df %<>% filter(iso_a3 == country_select())
@@ -455,7 +455,7 @@ mod_request_server <- function(id) {
           time_decision_max = max(time_decision, na.rm = TRUE)
         )
     })
-
+    
     output$value_boxes <- renderUI({
       # requests
       r <- scales::number(df_summary()$n_requests)
@@ -516,7 +516,7 @@ mod_request_server <- function(id) {
         showcase = bsicons::bs_icon("clock"),
         showcase_layout = showcase_top_right()
       )
-
+      
       layout_column_wrap(
         width = "200px",
         class = "mb-3",
@@ -527,16 +527,16 @@ mod_request_server <- function(id) {
         time_decision
       )
     })
-
+    
     # ==========================================================================
     # MAP
     # ==========================================================================
-
+    
     # MAP
-
+    
     output$map <- leaflet::renderLeaflet({
       bbox <- c(xmin = -180, ymin = -55.61183, xmax = 180, ymax = 83.64513)
-
+      
       leaflet::leaflet() %>%
         leaflet::setView(lng = 11, lat = 4.64916, zoom = 3) %>%
         # leaflet::fitBounds(bbox[["xmin"]], bbox[["ymin"]], bbox[["xmax"]], bbox[["ymax"]]) %>%
@@ -576,13 +576,13 @@ mod_request_server <- function(id) {
           height = 0
         )
     })
-
+    
     # Region select observers ====================================================
-
+    
     # reactive val boolean to indicate if a shape has been selected
     map_click <- reactiveVal(FALSE)
     country_select <- reactiveVal(NULL)
-
+    
     # if country is selected from map, update country_select value
     observeEvent(input$map_shape_click$id, {
       # browser()
@@ -601,7 +601,7 @@ mod_request_server <- function(id) {
       #     options = leaflet::pathOptions(pane = "geo_highlight")
       #   )
     })
-
+    
     observeEvent(input$map_click, {
       if (map_click()) {
         map_click(FALSE)
@@ -609,18 +609,18 @@ mod_request_server <- function(id) {
         # leaflet::leafletProxy("map", session) %>% leaflet::removeShape("highlight")
       }
     })
-
+    
     df_map <- reactive({
       map_var <- rlang::sym(input$var)
       map_group <- rlang::sym(input$group)
-
+      
       if (input$var == "Requests") {
         df_counts <- df_data() %>%
           drop_na(!!map_group) %>%
           mutate(!!map_group := forcats::fct_infreq(!!map_group)) %>%
           janitor::tabyl(iso_a3, !!map_group) %>%
           janitor::adorn_totals("col", name = "total")
-
+        
         df_map <- sf_world %>%
           sf::st_drop_geometry() %>%
           select(country, iso_a3, lon, lat) %>%
@@ -629,14 +629,14 @@ mod_request_server <- function(id) {
           mutate(across(where(is.double), ~ if_else(is.na(.x), 0, .x)))
       } else if (input$var == "Doses") {
         map_dose <- rlang::sym(input$dose)
-
+        
         df_counts <- df_data() %>%
           drop_na(!!map_group) %>%
           count(iso_a3, !!map_group, wt = !!map_dose) %>%
           mutate(!!map_group := forcats::fct_reorder(!!map_group, n, .desc = T)) %>%
           add_count(iso_a3, wt = n, name = "total") %>%
           pivot_wider(names_from = input$group, values_from = "n", values_fill = 0)
-
+        
         df_map <- sf_world %>%
           sf::st_drop_geometry() %>%
           select(country, iso_a3, lon, lat) %>%
@@ -644,19 +644,19 @@ mod_request_server <- function(id) {
           mutate(across(where(is.numeric), as.double)) %>%
           mutate(across(where(is.double), ~ if_else(is.na(.x), 0, .x)))
       }
-
+      
       return(df_map)
     })
-
+    
     observe({
       df_map <- df_map()
       chartData <- df_map %>%
         select(any_of(grouping_levels))
       # select(-country, -iso_a3, -lon, -lat, -total)
       pie_width <- 45 * sqrt(df_map$total) / sqrt(max(df_map$total))
-
+      
       mp <- map_pal(chartData)
-
+      
       leaflet::leafletProxy("map", session) %>%
         updateMinicharts(
           layerId = df_map$country,
@@ -669,36 +669,41 @@ mod_request_server <- function(id) {
           type = "pie"
         )
     })
-
+    
     # MAP_CHART
     # make df for the highcarter barplot
-
+    
     df_map_chart <- reactive({
+      
       map_chart_group <- rlang::sym(input$group)
       map_chart_dose_vars <- rlang::sym(input$dose)
-
+      
       # use function to prepare the data
       dat <- df_hc_bar(
         df_data = df_data(),
         request_dose = input$var,
         group_var = !!map_chart_group,
         dose_type = !!map_chart_dose_vars
-      )
-
+      ) 
+      
       return(dat)
     })
-
+    
     # Use the df_hc_bar inside the barplot function
-
+    
     output$map_chart <- renderHighchart({
+      
+      hc_pal <- set_pal(df_map_chart(), "group")
+      
       hc_bar(
         hc_bar_dat = df_map_chart(),
-        request_dose = input$var
+        request_dose = input$var, 
+        col_vec = hc_pal
       )
     })
-
+    
     # MAP_TBL
-
+    
     output$map_tbl <- reactable::renderReactable({
       dat <- df_map() %>%
         select(-c(iso_a3, lon, lat)) %>%
@@ -719,19 +724,19 @@ mod_request_server <- function(id) {
           )
         )
     })
-
+    
     # ==========================================================================
     # TIME-SERIES
     # ==========================================================================
-
+    
     # observeEvent(input$var, {
     #   cond <- (input$var == "Doses")
     #   shinyjs::toggle("ts_dose", condition = cond, anim = TRUE, animType = "fade")
     # })
-
+    
     df_ts <- reactive({
       req(input$ts_date, cancelOutput = TRUE)
-
+      
       if (input$var == "Doses" & input$ts_date == "s_date_delivery") {
         df <- df_shipment %>%
           inner_join(
@@ -742,13 +747,13 @@ mod_request_server <- function(id) {
         df <- df_data()
       }
       # if (!is.null(country_select())) df %<>% filter(iso_a3 == country_select())
-
+      
       req(input$ts_date %in% names(df), cancelOutput = TRUE)
-
+      
       ts_var <- rlang::sym(input$var)
       ts_group <- rlang::sym(input$group)
       ts_date <- rlang::sym(input$ts_date)
-
+      
       g_levels <- if (input$group == "r_mechanism_type") {
         grouping_levels[1:2]
       } else if (input$group == "r_mechanism") {
@@ -756,7 +761,7 @@ mod_request_server <- function(id) {
       } else if (input$group == "r_status") {
         grouping_levels[6:9]
       }
-
+      
       if (input$var == "Requests") {
         df_counts <- df %>%
           mutate(time_unit = as_date(floor_date(!!ts_date, unit = input$ts_unit))) %>%
@@ -765,22 +770,22 @@ mod_request_server <- function(id) {
           arrange(time_unit)
       } else if (input$var == "Doses") {
         ts_dose <- rlang::sym(input$dose)
-
+        
         df_counts <- df %>%
           mutate(time_unit = as_date(floor_date(!!ts_date, unit = input$ts_unit))) %>%
           count(time_unit, !!ts_group, wt = !!ts_dose) %>%
           mutate(!!ts_group := factor(!!ts_group, levels = g_levels) %>% forcats::fct_na_value_to_level("Unknown"))
       }
-
+      
       return(df_counts)
     })
-
+    
     output$ts_chart <- renderHighchart({
       req(df_ts())
-
+      
       ts_group <- rlang::sym(input$group)
       df_ts <- df_ts() %>% drop_na(time_unit)
-
+      
       if (isolate(input$ts_unit) == "quarter") {
         q_range <- range(df_ts$time_unit)
         complete_quarters <- seq.Date(q_range[1], q_range[2], by = "3 months")
@@ -797,11 +802,11 @@ mod_request_server <- function(id) {
         hc <- hchart(df_ts, "column", hcaes(x = time_unit, y = n, group = !!ts_group))
         x_type <- "datetime"
       }
-
+      
       date_lab <- names(date_vars[date_vars == isolate(input$ts_date)])
-
+      
       hc_pal <- set_pal(df_ts, input$group)
-
+      
       hc %>%
         hc_title(text = NULL) %>%
         hc_chart(zoomType = "x") %>%
@@ -831,20 +836,22 @@ mod_request_server <- function(id) {
         ) %>%
         my_hc_export()
     })
-
+    
     # ==========================================================================
     # DELAYS
     # ==========================================================================
-
+    
     delay_params <- reactive({
       dplyr::filter(delay_vars, var == input$delay_var)
     })
-
+    
     df_delay <- reactive({
+      
+      req(delay_params())
       delay_range <- delay_params()$range[[1]]
       date_1 <- rlang::sym(delay_range[1])
       date_2 <- rlang::sym(delay_range[2])
-
+      
       df_delay <- app_data$df_delay %>%
         filter(r_mechanism_type == "Reactive", event %in% delay_range) %>%
         # filter to requests in pre-filtered df_data
@@ -853,15 +860,15 @@ mod_request_server <- function(id) {
         pivot_wider(names_from = "event", values_from = "date") %>%
         mutate(delay = as.numeric({{ date_2 }} - {{ date_1 }}))
     })
-
+    
     output$delay_boxplot <- renderHighchart({
       validate(need(nrow(df_delay()) > 0, "No Data to display"))
-
+      
       delay_range <- delay_params()$range[[1]]
       date_1 <- rlang::sym(delay_range[1])
       expected_days <- delay_params()$expected_days
       delay_unit <- input$delay_unit
-
+      
       df_boxplot <- df_delay() %>%
         drop_na(!!date_1) %>%
         mutate(time_unit = as_date(floor_date(!!date_1, unit = delay_unit)))
@@ -871,7 +878,7 @@ mod_request_server <- function(id) {
         "3 months",
         input$delay_unit
       )
-
+      
       frmt_time_unit <- switch(
         delay_unit,
         "year" = function(x) format(x, "%Y") %>% factor(),
@@ -879,10 +886,10 @@ mod_request_server <- function(id) {
         "month" = function(x) format(x, "%Y-%m") %>% factor(),
         "week" = function(x) format(x, "%Y-W%V") %>% factor()
       )
-
+      
       tu_range <- range(df_boxplot$time_unit)
       complete_tu <- seq.Date(tu_range[1], tu_range[2], by = complete_by)
-
+      
       df_boxplot %<>%
         arrange(time_unit) %>%
         complete(time_unit = complete_tu) %>% # , fill = list(delay = NA)
@@ -895,7 +902,7 @@ mod_request_server <- function(id) {
         name = "Delay (days)",
         showInLegend = FALSE
       )
-
+      
       highchart() %>%
         hc_chart(zoomType = "x") %>%
         hc_xAxis(
@@ -917,17 +924,17 @@ mod_request_server <- function(id) {
         hc_caption(text = "Calculated for reactive vaccination campaigns only") %>%
         my_hc_export()
     })
-
+    
     output$delay_hist <- renderHighchart({
       validate(need(nrow(df_delay()) > 0, "No Data to display"))
       df_delay <- df_delay()
       expected_days <- delay_params()$expected_days
       n_missing <- sum(is.na(df_delay$delay))
-
+      
       df_hc <- df_delay %>%
         drop_na(delay) %>%
         count(delay)
-
+      
       hchart(df_hc, "column", hcaes(delay, n), name = "Days") %>%
         hc_chart(zoomType = "x") %>%
         hc_title(text = NULL) %>%
@@ -958,13 +965,13 @@ mod_request_server <- function(id) {
         hc_credits(enabled = TRUE, text = glue::glue("Unknown delay time for {scales::number(n_missing)} cases")) %>%
         my_hc_export()
     })
-
+    
     output$delay_tbl <- gt::render_gt({
       validate(need(nrow(df_delay()) > 0, "No Data to display"))
       df <- df_delay()
       group <- input$group
       group_lab <- dplyr::if_else(group == "r_mechanism_type", "Mechanism", "Status")
-
+      
       df %>%
         dplyr::select(.data[[group]], delay) %>%
         gtsummary::tbl_summary(
@@ -985,11 +992,11 @@ mod_request_server <- function(id) {
         gtsummary::modify_footnote(update = gtsummary::everything() ~ NA) %>%
         gtsummary::as_gt()
     })
-
+    
     # ==========================================================================
     # TIMEVIS
     # ==========================================================================
-
+    
     observe({
       df_demands <- df_data() %>%
         distinct(r_country, r_demand_id) %>%
@@ -997,19 +1004,19 @@ mod_request_server <- function(id) {
       demands <- split(purrr::set_names(df_demands$r_demand_id), df_demands$r_country)
       shinyWidgets::updatePickerInput(session, "demand", choices = demands)
     })
-
+    
     output$timevis <- renderTimevis({
       req(input$demand)
-
+      
       df_out <- df_timevis %>%
         filter(r_demand_id == input$demand) %>%
         drop_na(start)
-
+      
       dates <- unique(df_out$start)
-
+      
       start_date <- min(dates) - lubridate::days(3)
       end_date <- max(dates) + lubridate::days(3)
-
+      
       timevis(
         df_out,
         options = list(

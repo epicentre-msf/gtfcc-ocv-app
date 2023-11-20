@@ -140,7 +140,7 @@ df_hc_bar <- function(df_data,
       
       group_by(r_country, group = {{group_var}}) %>% 
       
-      summarise(n = sum( {{dose_type}} ) ) %>% 
+      summarise(n = sum( {{dose_type}}, na.rm = TRUE) ) %>% 
       
       group_by(r_country) %>% 
       
@@ -183,12 +183,14 @@ df_hc_bar <- function(df_data,
       )
   }
   
+  df <- df %>%  mutate(group = factor(group, grouping_levels))
+  
   return(df)
 } 
 
 #function to make the map chart barplot   
 
-hc_bar <- function(hc_bar_dat, request_dose) {
+hc_bar <- function(hc_bar_dat, request_dose, col_vec) {
   
   hchart(hc_bar_dat, 
          
@@ -215,13 +217,9 @@ hc_bar <- function(hc_bar_dat, request_dose) {
                                 align = "center", 
                                 formatter = JS( "function() { 
                                                 if(this.total <= 999){ 
-                                                
                                                 return this.total 
-                                                
-                                                } else if ( this.total >= 1000 &  this.total <= 99999) { return Math.round( this.total/1000) + ' K'
-                                                
-                                                } else { return Math.round( this.total/100000) + ' M' }
-                                                
+                                                } else if ( this.total >= 1000 &  this.total <= 999999) { return Math.round( this.total/1000) + ' K'
+                                                } else { return Math.round( this.total/1000000) + ' M' }
                                                 }" ) )
     ) %>%
     
@@ -244,5 +242,7 @@ hc_bar <- function(hc_bar_dat, request_dose) {
       y = 40
     ) %>% 
     
-    my_hc_export()
+    hc_colors(col_vec) %>% 
+    
+    my_hc_export( )
 }
