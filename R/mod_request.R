@@ -674,6 +674,7 @@ mod_request_server <- function(id) {
     # make df for the highcarter barplot
 
     df_map_chart <- reactive({
+      req(df_data(), input$group, input$dose)
       map_chart_group <- rlang::sym(input$group)
       map_chart_dose_vars <- rlang::sym(input$dose)
 
@@ -691,9 +692,12 @@ mod_request_server <- function(id) {
     # Use the df_hc_bar inside the barplot function
 
     output$map_chart <- renderHighchart({
+      hc_pal <- set_pal(df_map_chart(), "group")
+
       hc_bar(
         hc_bar_dat = df_map_chart(),
-        request_dose = input$var
+        request_dose = input$var,
+        col_vec = hc_pal
       )
     })
 
@@ -707,7 +711,7 @@ mod_request_server <- function(id) {
           ~ if_else(total > 0, paste0(scales::number(.x), " (", round(.x / total * 100, digits = 1), "%)"), as.character(.x))
         )) %>%
         arrange(desc(total)) %>%
-        relocate(total, .after = last_col()) %>% 
+        relocate(total, .after = last_col()) %>%
         reactable::reactable(
           highlight = TRUE,
           searchable = TRUE,
@@ -744,6 +748,7 @@ mod_request_server <- function(id) {
       # if (!is.null(country_select())) df %<>% filter(iso_a3 == country_select())
 
       req(input$ts_date %in% names(df), cancelOutput = TRUE)
+      req(input$dose %in% names(df), cancelOutput = TRUE)
 
       ts_var <- rlang::sym(input$var)
       ts_group <- rlang::sym(input$group)
@@ -841,6 +846,7 @@ mod_request_server <- function(id) {
     })
 
     df_delay <- reactive({
+      req(delay_params())
       delay_range <- delay_params()$range[[1]]
       date_1 <- rlang::sym(delay_range[1])
       date_2 <- rlang::sym(delay_range[2])
@@ -865,17 +871,20 @@ mod_request_server <- function(id) {
       df_boxplot <- df_delay() %>%
         drop_na(!!date_1) %>%
         mutate(time_unit = as_date(floor_date(!!date_1, unit = delay_unit)))
-      
+
       complete_by <- if_else(
         delay_unit == "quarter",
         "3 months",
         input$delay_unit
       )
 
-      frmt_time_unit <- switch(
-        delay_unit,
+      frmt_time_unit <- switch(delay_unit,
         "year" = function(x) format(x, "%Y") %>% factor(),
-        "quarter" = function(x) quarter(x, with_year = TRUE) %>% str_replace("\\.", "-Q") %>% factor(),
+        "quarter" = function(x) {
+          quarter(x, with_year = TRUE) %>%
+            str_replace("\\.", "-Q") %>%
+            factor()
+        },
         "month" = function(x) format(x, "%Y-%m") %>% factor(),
         "week" = function(x) format(x, "%Y-W%V") %>% factor()
       )
@@ -887,7 +896,7 @@ mod_request_server <- function(id) {
         arrange(time_unit) %>%
         complete(time_unit = complete_tu) %>% # , fill = list(delay = NA)
         mutate(time_unit = frmt_time_unit(time_unit))
-      
+
       hc_boxplot <- data_to_boxplot(
         df_boxplot,
         delay,
@@ -913,7 +922,7 @@ mod_request_server <- function(id) {
           )
         ) %>%
         hc_add_series_list(hc_boxplot) %>%
-        hc_tooltip(shared = TRUE) %>% 
+        hc_tooltip(shared = TRUE) %>%
         hc_caption(text = "Calculated for reactive vaccination campaigns only") %>%
         my_hc_export()
     })
