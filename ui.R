@@ -27,6 +27,7 @@ ui <- tagList(
     theme = bs_theme(
       base_font = font_google(
         app_font, 
+        cache = sass::sass_file_cache(app_cache),
         wght = c(300, 400, 500, 600, 700, 800),
         ital = c(0, 1)
       ),

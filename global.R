@@ -21,12 +21,14 @@ app_name <- "gtfcc_ocv"
 app_title <- "GTFCC OCV"
 app_font <- "Alegreya Sans"
 p_font <- "Merriweather"
+app_cache <- here::here(".cache")
+if (!dir.exists(app_cache)) dir.create(app_cache)
 
 SUCCESS <- "#19bdb4"
 WARNING <- "#d39234"
 
 # local disk cache
-shiny::shinyOptions(cache = cachem::cache_disk(here::here(".cache")))
+shiny::shinyOptions(cache = cachem::cache_disk(app_cache))
  
 # week starts monday
 options("lubridate.week.start" = 1)
