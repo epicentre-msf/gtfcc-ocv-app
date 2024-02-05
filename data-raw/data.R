@@ -3,7 +3,7 @@ library(fs)
 library(readxl)
 source(here::here("R", "utils_data.R"))
 
-path_sharepoint <- "~/Library/CloudStorage/OneDrive-SharedLibraries-MSF/EpiDS - GTFCC-OCV/data-clean/export4dashboard/"
+path_sharepoint <- path(Sys.getenv("SHAREPOINT_PATH"), "EpiDS - GTFCC-OCV/data-clean/export4dashboard/")
 path_data <- max(dir_ls(path_sharepoint, regexp = "gtfcc_ocv_data_dashoard__.*.xlsx"))
 
 date_updated <- fs::file_info(path_data)$modification_time %>% lubridate::as_date()
@@ -11,9 +11,9 @@ write_rds(date_updated, here::here("data", "date_updated.rds"))
 
 data_sheets <- c("Request", "Shipment", "Campaign and round")
 
-dat <- data_sheets %>% 
-  purrr::set_names(snakecase::to_snake_case(.)) %>% 
-  map(~qxl::qread(path_data, .x))
+dat <- data_sheets %>%
+  purrr::set_names(snakecase::to_snake_case(.)) %>%
+  map(~ qxl::qread(path_data, .x))
 
 dat$request <- dat$request %>%
   mutate(

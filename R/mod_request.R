@@ -17,6 +17,11 @@ mod_request_ui <- function(id) {
           animate = FALSE,
           width = "95%"
         ),
+        bslib::input_switch(
+          id = ns("keep_missing_dates"),
+          label = "Keep requests without a date?",
+          value = TRUE
+        ),
         shinyWidgets::pickerInput(
           inputId = ns("region"),
           label = "Region",
@@ -406,8 +411,13 @@ mod_request_server <- function(id) {
     })
 
     df_data <- reactive({
-      df <- df_request %>%
-        filter(quarter >= input$q_range[1], quarter <= input$q_range[2])
+      if (isTruthy(input$keep_missing_dates)) {
+        df <- df_request %>%
+          filter(is.na(quarter) | between(quarter, input$q_range[1], input$q_range[2]))
+      } else {
+        df <- df_request %>%
+          filter(between(quarter, input$q_range[1], input$q_range[2]))
+      }
 
       # if (length(input$geo)) df %<>% filter_geo(input$geo)
       if (length(input$region)) df %<>% filter(r_who_region %in% input$region)
