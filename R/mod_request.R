@@ -6,74 +6,89 @@ mod_request_ui <- function(id) {
     border = FALSE,
     fillable = FALSE,
     sidebar = sidebar(
-      div(
-        id = ns("resetable_filters"),
-        shinyWidgets::sliderTextInput(
-          inputId = ns("q_range"),
-          label = "Quarter of request",
-          choices = q_range,
-          selected = c(min(q_range), max(q_range)),
-          grid = FALSE,
-          animate = FALSE,
-          width = "95%"
+      id = ns("resetable_filters"),
+      bg = "#fff",
+      bslib::accordion(
+        bslib::accordion_panel(
+          title = "Date filters",
+          mod_date_filter_ui(
+            id = ns("df"),
+            request_range,
+            shipment_range,
+            round_range
+          )
         ),
-        bslib::input_switch(
-          id = ns("keep_missing_dates"),
-          label = "Keep requests without a date?",
-          value = TRUE
-        ),
-        shinyWidgets::pickerInput(
-          inputId = ns("region"),
-          label = "Region",
-          choices = unique(df_request$r_who_region) %>% na.omit(),
-          options = picker_opts(),
-          multiple = TRUE
-        ),
-        shinyWidgets::pickerInput(
-          inputId = ns("country"),
-          label = "Country",
-          choices = unique(df_request$r_country) %>% na.omit(),
-          options = picker_opts(search = TRUE),
-          multiple = TRUE
-        ),
-        shinyWidgets::pickerInput(
-          inputId = ns("status"),
-          label = "Status",
-          choices = unique(df_request$r_status) %>% na.omit(),
-          options = picker_opts(),
-          multiple = TRUE
-        ),
-        shinyWidgets::pickerInput(
-          inputId = ns("context"),
-          label = "Context",
-          choices = unique(df_request$r_context) %>% na.omit(),
-          options = picker_opts(),
-          multiple = TRUE
-        ),
-        shinyWidgets::pickerInput(
-          inputId = ns("mechanism"),
-          label = "Mechanism",
-          choices = unique(df_request$r_mechanism_type) %>% na.omit(),
-          options = picker_opts(),
-          multiple = TRUE
-        ),
-        shinyWidgets::pickerInput(
-          inputId = ns("agency"),
-          label = "Request Agency",
-          choices = unique(df_request$r_agency) %>% na.omit(),
-          options = picker_opts(),
-          multiple = TRUE
-        ),
-        shinyWidgets::pickerInput(
-          inputId = ns("vaccine"),
-          label = "Type of vaccine",
-          choices = unique(df_shipment$s_vaccine) %>% na.omit(),
-          options = picker_opts(),
-          multiple = TRUE
-        ),
-        actionButton(ns("go"), "Update Data", icon = icon("database"), class = "btn-success btn-sm", style = "color: #fff;"),
-        actionButton(ns("reset"), "Reset Inputs", icon = icon("arrows-rotate"), class = "btn-warning btn-sm", style = "color: #fff;")
-      )
+        bslib::accordion_panel(
+          title = "Category filters",
+          shinyWidgets::pickerInput(
+            inputId = ns("region"),
+            label = "Region",
+            choices = unique(df_request$r_who_region) %>% na.omit(),
+            options = picker_opts(),
+            multiple = TRUE
+          ),
+          shinyWidgets::pickerInput(
+            inputId = ns("country"),
+            label = "Country",
+            choices = unique(df_request$r_country) %>% na.omit(),
+            options = picker_opts(search = TRUE),
+            multiple = TRUE
+          ),
+          shinyWidgets::pickerInput(
+            inputId = ns("status"),
+            label = "Status",
+            choices = unique(df_request$r_status) %>% na.omit(),
+            options = picker_opts(),
+            multiple = TRUE
+          ),
+          shinyWidgets::pickerInput(
+            inputId = ns("context"),
+            label = "Context",
+            choices = unique(df_request$r_context) %>% na.omit(),
+            options = picker_opts(),
+            multiple = TRUE
+          ),
+          shinyWidgets::pickerInput(
+            inputId = ns("mechanism"),
+            label = "Mechanism",
+            choices = unique(df_request$r_mechanism_type) %>% na.omit(),
+            options = picker_opts(),
+            multiple = TRUE
+          ),
+          shinyWidgets::pickerInput(
+            inputId = ns("agency"),
+            label = "Request Agency",
+            choices = unique(df_request$r_agency) %>% na.omit(),
+            options = picker_opts(),
+            multiple = TRUE
+          ),
+          shinyWidgets::pickerInput(
+            inputId = ns("vaccine"),
+            label = "Type of vaccine",
+            choices = unique(df_shipment$s_vaccine) %>% na.omit(),
+            options = picker_opts(),
+            multiple = TRUE
+          )
+        )
+      ),
+      actionButton(ns("go"), "Update Data", icon = icon("database"), class = "btn-success btn-sm", style = "color: #fff;"),
+      actionButton(ns("reset"), "Reset Inputs", icon = icon("arrows-rotate"), class = "btn-warning btn-sm", style = "color: #fff;")
+      # div(
+      #   shinyWidgets::sliderTextInput(
+      #     inputId = ns("q_range"),
+      #     label = "Quarter of request",
+      #     choices = q_range,
+      #     selected = c(min(q_range), max(q_range)),
+      #     grid = FALSE,
+      #     animate = FALSE,
+      #     width = "95%"
+      #   ),
+      #   bslib::input_switch(
+      #     id = ns("keep_missing_dates"),
+      #     label = "Keep requests without a date?",
+      #     value = TRUE
+      #   )
+      # )
     ),
     uiOutput(ns("value_boxes")),
     tags$hr(),
@@ -410,15 +425,22 @@ mod_request_server <- function(id) {
       geo_select(input$geo)
     })
 
-    df_data <- reactive({
-      if (isTruthy(input$keep_missing_dates)) {
-        df <- df_request %>%
-          filter(is.na(quarter) | between(quarter, input$q_range[1], input$q_range[2]))
-      } else {
-        df <- df_request %>%
-          filter(between(quarter, input$q_range[1], input$q_range[2]))
-      }
+    df_date_filtered <- mod_date_filter_server(
+      id = "df",
+      df_request,
+      df_shipment,
+      df_round
+    )
 
+    df_data <- reactive({
+      # if (isTruthy(input$keep_missing_dates)) {
+      #   df <- df_request %>%
+      #     filter(is.na(quarter) | between(quarter, input$q_range[1], input$q_range[2]))
+      # } else {
+      #   df <- df_request %>%
+      #     filter(between(quarter, input$q_range[1], input$q_range[2]))
+      # }
+      df <- df_date_filtered()
       # if (length(input$geo)) df %<>% filter_geo(input$geo)
       if (length(input$region)) df %<>% filter(r_who_region %in% input$region)
       if (length(input$country)) df %<>% filter(r_country %in% input$country)
@@ -476,8 +498,8 @@ mod_request_server <- function(id) {
         value = r,
         tags$p(glue::glue("{a} ({ap}) approved")),
         showcase = bsicons::bs_icon("card-checklist"),
-        theme_color = "primary",
-        showcase_layout = showcase_top_right()
+        theme = "primary",
+        showcase_layout = "left center"
       )
       # doses
       r <- fmt_n_dose(df_summary()$n_dose_requested)
@@ -488,7 +510,7 @@ mod_request_server <- function(id) {
         value = r,
         tags$p(glue::glue("{a} ({ap}) approved")),
         showcase = bsicons::bs_icon("box-seam"),
-        theme_color = "info",
+        theme = "info",
         showcase_layout = showcase_top_right()
       )
       # doses shipped
@@ -499,7 +521,7 @@ mod_request_server <- function(id) {
         title = "Doses shipped",
         value = s,
         tags$p(glue::glue("{s_icg} ({s_icg_p}) shipped with ICG")),
-        theme_color = "success",
+        theme = "success",
         showcase = bsicons::bs_icon("airplane"),
         showcase_layout = showcase_top_right()
       )
@@ -511,7 +533,7 @@ mod_request_server <- function(id) {
         title = "Countries",
         value = n,
         tags$p(glue::glue("{na} ({pcnt}) with an approved request")),
-        theme_color = "warning",
+        theme = "warning",
         showcase = bsicons::bs_icon("globe"),
         showcase_layout = showcase_top_right()
       )
@@ -522,7 +544,7 @@ mod_request_server <- function(id) {
         title = "Average decision time",
         value = days,
         tags$p(glue::glue("Min: {df_summary()$time_decision_min} days - Max: {df_summary()$time_decision_max} days")),
-        theme_color = "danger",
+        theme = "danger",
         showcase = bsicons::bs_icon("clock"),
         showcase_layout = showcase_top_right()
       )
