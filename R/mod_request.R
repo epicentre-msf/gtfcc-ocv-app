@@ -499,7 +499,7 @@ mod_request_server <- function(id) {
         tags$p(glue::glue("{a} ({ap}) approved")),
         showcase = bsicons::bs_icon("card-checklist"),
         theme = "primary",
-        showcase_layout = "left center"
+        showcase_layout = showcase_left_center()
       )
       # doses
       r <- fmt_n_dose(df_summary()$n_dose_requested)
@@ -511,7 +511,7 @@ mod_request_server <- function(id) {
         tags$p(glue::glue("{a} ({ap}) approved")),
         showcase = bsicons::bs_icon("box-seam"),
         theme = "info",
-        showcase_layout = showcase_top_right()
+        showcase_layout = showcase_left_center()
       )
       # doses shipped
       s <- fmt_n_dose(df_summary()$n_dose_shipped)
@@ -523,7 +523,7 @@ mod_request_server <- function(id) {
         tags$p(glue::glue("{s_icg} ({s_icg_p}) shipped with ICG")),
         theme = "success",
         showcase = bsicons::bs_icon("airplane"),
-        showcase_layout = showcase_top_right()
+        showcase_layout = showcase_left_center()
       )
       # n countries
       n <- scales::number(df_summary()$n_countries)
@@ -535,7 +535,7 @@ mod_request_server <- function(id) {
         tags$p(glue::glue("{na} ({pcnt}) with an approved request")),
         theme = "warning",
         showcase = bsicons::bs_icon("globe"),
-        showcase_layout = showcase_top_right()
+        showcase_layout = showcase_left_center()
       )
       # time decision
       days <- as.character(glue::glue("{df_summary()$time_decision_av} days"))
@@ -546,7 +546,7 @@ mod_request_server <- function(id) {
         tags$p(glue::glue("Min: {df_summary()$time_decision_min} days - Max: {df_summary()$time_decision_max} days")),
         theme = "danger",
         showcase = bsicons::bs_icon("clock"),
-        showcase_layout = showcase_top_right()
+        showcase_layout = showcase_left_center()
       )
 
       layout_column_wrap(
