@@ -425,12 +425,18 @@ mod_request_server <- function(id) {
       geo_select(input$geo)
     })
 
-    df_date_filtered <- mod_date_filter_server(
+    date_filtered <- mod_date_filter_server(
       id = "df",
       df_request,
       df_shipment,
       df_round
     )
+    df_date_filtered <- reactive(date_filtered()$df)
+    date_inputs <- reactive(date_filtered()$inputs)
+
+    observe({
+      print(date_inputs())
+    })
 
     df_data <- reactive({
       # if (isTruthy(input$keep_missing_dates)) {
@@ -774,6 +780,12 @@ mod_request_server <- function(id) {
             df_data() %>% distinct(r_demand_id, r_mechanism, r_mechanism_type, r_status),
             by = c("s_r_demand_id" = "r_demand_id")
           )
+        di <- isolate(date_inputs())
+        if (isTruthy(di$shipment_active)) {
+          start <- di$shipment[1]
+          end <- di$shipment[2]
+          df <- df %>% filter(between(s_date_delivery, start, end))
+        }
       } else {
         df <- df_data()
       }

@@ -8,6 +8,24 @@ df_request <- app_data$request
 df_round <- app_data$campaign_and_round
 df_shipment <- app_data$shipment
 
+start <- as.Date("2023-01-01")
+end <- as.Date("2023-12-31")
+
+ship_filter <- df_shipment %>%
+  filter(between(s_date_delivery, start, end)) %>%
+  filter(s_r_demand_id == "2022-I21-D01")
+  count(year(s_date_delivery))
+  select(r_demand_id = s_r_demand_id)
+
+req_filter <- df_request %>% semi_join(ship_filter)
+
+df_shipment %>%
+  semi_join(req_filter, by = c("s_r_demand_id" = "r_demand_id")) %>%
+  filter(s_date_delivery < start)
+  count(year(s_date_delivery), wt = s_dose_ship)
+  pull(s_date_delivery) %>%
+  range(na.rm = TRUE)
+
 request_range <- range(df_request$r_date_receipt, na.rm = TRUE)
 shipment_range <- range(df_shipment$s_date_delivery, na.rm = TRUE)
 round_range <- range(df_round$cr_date_round_start, na.rm = TRUE)

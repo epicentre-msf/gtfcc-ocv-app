@@ -57,7 +57,10 @@ mod_date_filter_server <- function(
       df_out
     })
 
-    return(reactive(df_filtered()))
+    return(reactive(list(
+      inputs = reactiveValuesToList(input),
+      df = df_filtered()
+    )))
   })
 }
 
