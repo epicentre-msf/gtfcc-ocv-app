@@ -434,9 +434,9 @@ mod_request_server <- function(id) {
     df_date_filtered <- reactive(date_filtered()$df)
     date_inputs <- reactive(date_filtered()$inputs)
 
-    observe({
-      print(date_inputs())
-    })
+    # observe({
+    #   print(date_inputs())
+    # })
 
     df_data <- reactive({
       # if (isTruthy(input$keep_missing_dates)) {

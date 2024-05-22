@@ -4,7 +4,7 @@ library(readxl)
 source(here::here("R", "utils_data.R"))
 
 path_sharepoint <- path(Sys.getenv("SHAREPOINT_PATH"), "EpiDS - GTFCC-OCV/data-clean/export4dashboard/")
-path_data <- max(dir_ls(path_sharepoint, regexp = "gtfcc_ocv_data_dashoard__.*.xlsx"))
+(path_data <- max(dir_ls(path_sharepoint, regexp = "gtfcc_ocv_data_dashoard__.*.xlsx")))
 
 date_updated <- fs::file_info(path_data)$modification_time %>% lubridate::as_date()
 write_rds(date_updated, here::here("data", "date_updated.rds"))
