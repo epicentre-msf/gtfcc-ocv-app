@@ -11,8 +11,8 @@ rsync -zavh episerv:/home/epicentre/gtfcc-ocv-app/data /Users/paul/epicentre/gtf
 
 # https://reports.msf.net/testing/
 docker run \
---rm \
--p 5858:3838 \
--v /home/epicentre/gtfcc-ocv-app:/root/app \
- gtfcc-app \
- R -e "shiny::runApp('/root/app', port = 3838, host = '0.0.0.0')"
+    --rm \
+    -p 5858:3838 \
+    -v /home/epicentre/gtfcc-ocv-app:/root/app \
+    gtfcc-app \
+    R -e "shiny::runApp('/root/app', port = 3838, host = '0.0.0.0')"
