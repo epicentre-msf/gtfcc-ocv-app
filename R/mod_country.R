@@ -12,8 +12,8 @@ mod_country_profile_ui <- function(id) {
       shinyWidgets::pickerInput(
         inputId = ns("country"),
         label = "Country",
-        choices = c("Cameroon" = "CMR"),
-        options = picker_opts()
+        choices = NULL,
+        options = picker_opts(actions = FALSE, search = TRUE)
       ),
       shiny::sliderInput(
         inputId = ns("time_period"),
@@ -187,6 +187,27 @@ mod_country_profile_server <- function(id, df_country_profile) {
     ns <- session$ns
     
     # OBSERVERS ================================
+
+    observe({
+      countries <- df_country_profile |> 
+        distinct(ref_adm0_name) |> 
+        drop_na() |> 
+        left_join(
+          countrycode::codelist %>% transmute(ref_adm0_name = iso3c, country = cow.name),
+          by = "ref_adm0_name"
+        ) %>%
+        arrange(country) %>%
+        dplyr::pull(ref_adm0_name)
+
+      shinyWidgets::updatePickerInput(
+        session = session,
+        inputId = "country",
+        choices = countries,
+        choicesOpt = list(
+          content = purrr::map(countries, flag_country)
+        )
+      )
+    })
     
     observeEvent(input$period_jump, {
       date_range <- c(Sys.Date() - lubridate::period(as.numeric(input$period_jump), "months"), Sys.Date())
@@ -240,6 +261,7 @@ mod_country_profile_server <- function(id, df_country_profile) {
     
     # filter the data for the selected country and date range
     country_df <- reactive({
+      req(input$country)
       date_range <- as.Date(input$time_period)
       prep_dat %>%
         filter(
@@ -251,7 +273,10 @@ mod_country_profile_server <- function(id, df_country_profile) {
     
     #filter the admin dict for country 
     admin_country <- reactive({ 
-      admin_dict %>% filter(adm0_iso3 == input$country) %>%  select(c(adm1_level, adm2_level, adm3_level)) 
+      req(input$country)
+      admin_dict %>% 
+        filter(adm0_iso3 == input$country) %>%  
+        select(c(adm1_level, adm2_level, adm3_level)) 
     }) 
     
     admin_label <- reactive({unlist(admin_country()[1,])})
@@ -449,6 +474,8 @@ mod_country_profile_server <- function(id, df_country_profile) {
     
     # prepare the data for map
     map_df <- reactive({
+      req(input$country)
+      req(country_df())
       if (length(input$campaign)) {
         map_df <- get_map_data(
           filter(
@@ -466,7 +493,7 @@ mod_country_profile_server <- function(id, df_country_profile) {
         )
       }
       return(map_df)
-    })
+    }) 
     
     
     # geo reference the map_df using geodata and the input$admin_level
@@ -477,16 +504,19 @@ mod_country_profile_server <- function(id, df_country_profile) {
     rv <- reactiveValues()
     
     observe({
+      req(map_df())
+      req(geo_select())
+
       geo_join <- geo_select()$join_by
       geo_col <- unname(geo_join)
       geo_col_sym <- rlang::sym(geo_col)
       geo_name_col <- geo_select()$name_var
       geo_name_col_sym <- rlang::sym(geo_name_col)
-      geo_level_name <- geo_select()$level_name
+      geo_layer_name <- geo_select()$layer_name
       
       # filter sf polygons to only those found in dataset
       sf <- geo_select()$sf
-      sf <- inner_join(sf, map_df(), by = geo_join)
+      sf <- inner_join(sf, map_df(), by = c("adm0_iso3", geo_join))
       
       # save as reactive values
       rv$geo_join <- geo_join
@@ -494,7 +524,7 @@ mod_country_profile_server <- function(id, df_country_profile) {
       rv$geo_col_sym <- geo_col_sym
       rv$geo_name_col <- geo_name_col
       rv$geo_name_col_sym <- geo_name_col_sym
-      rv$geo_level_name <- geo_level_name
+      rv$geo_layer_name <- geo_layer_name
       rv$sf <- sf
     })
     
@@ -709,21 +739,20 @@ mod_country_profile_server <- function(id, df_country_profile) {
 
 # function to prepare the data for country profile
 prep_data <- function(target_area_df) {
-  
   # make new id
   target_area_df %>%
     select(
       request_id = t_r_id,
-      country_code,
+      country_code = ref_adm0_name,
       country_name = t_r_country,
-      adm1_name = adm1_t_target_area,
-      adm2_name = adm2_t_target_area,
-      adm3_name = adm3_t_target_area,
-      adm4_name = adm4_t_target_area,
-      adm1_pcode = pcode_adm1_t_target_area,
-      adm2_pcode = pcode_adm2_t_target_area,
-      adm3_pcode = pcode_adm3_t_target_area,
-      adm4_pcode = pcode_adm4_t_target_area,
+      adm1_name = ref_adm1_name,
+      adm2_name = ref_adm2_name,
+      adm3_name = ref_adm3_name,
+      adm4_name = ref_adm4_name,
+      adm1_pcode = ref_adm1_pcode,
+      adm2_pcode = ref_adm2_pcode,
+      adm3_pcode = ref_adm3_pcode,
+      adm4_pcode = ref_adm4_pcode,
       campaign_type = t_campaign_type,
       campaign_strategy = t_campaign_strategy,
       target_area_pop = t_target_area_population,
@@ -885,7 +914,7 @@ get_map_data <- function(country_df, filter_var, admin_level) {
   }
   
   df %>%
-    group_by(request_id, !!admin_sym) %>% 
+    group_by(request_id, adm0_iso3 = country_code, !!admin_sym) %>% 
     summarise(
       n_targets = n(),
       date_start_d1 = min(date_start_d1),

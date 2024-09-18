@@ -30,6 +30,13 @@ health_icon <- function(icon, type = "filled", format = "svg", height = 25) {
   )
 }
 
+flag_country <- function(iso3) {
+  iso2 <- tolower(countrycode::countrycode(iso3, "iso3c", "iso2c"))
+  cname <- countrycode::countrycode(iso3, "iso3c", "cow.name")
+  url <- glue::glue("https://cdn.rawgit.com/lipis/flag-icon-css/master/flags/4x3/{iso2}.svg")
+  shiny::HTML(paste(tags$img(src = url, width = 20, height = 15), cname))
+}
+
 picker_opts <- function(actions = TRUE, search = FALSE, none_text = "All", selected_text = "selected", style = "btn-sm btn-outline-success", ...) {
   shinyWidgets::pickerOptions(
     actionsBox = actions,

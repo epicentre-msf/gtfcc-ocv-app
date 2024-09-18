@@ -33,32 +33,9 @@ options("lubridate.week.start" = 1)
 
 date_updated <- readr::read_rds(here::here("data", "date_updated.rds")) %>% format("%d %B %Y")
 sf_world <- readr::read_rds(here::here("data", "sf_world.rds"))
+geo_data <- read_rds(here::here("data", "geo_data.rds"))
 
-#read  CMR for demo
-
-# geo data format ==========================
-geo_data <- list(
-  "adm1" = list(
-    level_name = "Admin 1",
-    sf = read_rds(here::here("data", "cmr_adm1.rds")),
-    name_var = "adm1_name",
-    join_by = c("pcode" = "adm1_pcode")
-  ),
-  "adm2" = list(
-    level_name = "Admin 2",
-    sf =  read_rds(here::here("data", "cmr_adm2.rds")),
-    name_var = "adm2_name",
-    join_by = c("pcode" = "adm2_pcode")
-  ),
-  "adm3" = list(
-    level_name = "Admin 3",
-    sf = readr::read_rds(here::here("data", "cmr_adm3.rds")),
-    name_var = "adm3_name",
-    join_by = c("pcode" = "adm3_pcode")
-  )
-)
-
-#load admin_level dict
+# load admin_level dict
 admin_dict <- read_rds(here::here("data", "admin_dict.rds"))
 
 app_data <- readr::read_rds(here::here("data", "app_data.rds"))
