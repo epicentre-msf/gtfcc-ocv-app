@@ -50,6 +50,7 @@ import_country_data <- function(path, sheet = "Target areas") {
     dplyr::mutate(
       dplyr::across(dplyr::starts_with("adm"), as.character),
       dplyr::across(dplyr::contains("pcode"), as.character),
+      dplyr::across(dplyr::contains("nrow"), as.numeric),
       dplyr::across(dplyr::contains("population"), as.numeric),
       dplyr::across(dplyr::contains("dose"), as.numeric),
       dplyr::across(dplyr::contains("cov"), as.numeric),
@@ -112,11 +113,12 @@ clean_geo <- function(dat, paths, write_checks = TRUE) {
 
   geo_ref <- map(adm0_levels, ~ obtdata::fetch_georef(.x, path_onedrive = paths$onedrive)$ref) %>%
     list_rbind() %>%
-    mutate(adm0_name = countrycode::countrycode(adm0_name, origin = "country.name", destination = "iso3c")) %>% 
+    # mutate(adm0_name = countrycode::countrycode(adm0_name, origin = "country.name", destination = "iso3c")) %>% 
     # mutate(adm0_name = if_else(grepl("Yemen", adm0_name), "Yemen", adm0_name)) %>% # drop Arabic component from adm0 for YEM
     # mutate(adm1_name = paste(adm0_iso3, adm1_name)) %>%
+    mutate(adm0_name = adm0_iso3) |> 
     select(level, all_of(adm_cols), pcode) %>%
-    distinct(pcode, .keep_all = TRUE)
+    distinct(adm0_name, pcode, .keep_all = TRUE)
 
 
   # manual corrections --------------------------------------------------------
@@ -221,7 +223,7 @@ clean_geo <- function(dat, paths, write_checks = TRUE) {
     left_join(geo_ref2, by = c("adm1_name", "adm2_name")) %>%
     left_join(geo_ref3, by = c("adm1_name", "adm2_name", "adm3_name")) %>%
     left_join(geo_ref4, by = c("adm1_name", "adm2_name", "adm3_name", "adm4_name")) %>%
-    select(pcode, ref_adm1_pcode:ref_adm4_pcode)
+    select(adm0_name, pcode, ref_adm1_pcode:ref_adm4_pcode)
 
   df_ref_bind <- df_match %>%
     filter(!is.na(pcode)) %>%
@@ -238,7 +240,7 @@ clean_geo <- function(dat, paths, write_checks = TRUE) {
       ref_adm4_name,
       ref_pcode = pcode
     ) %>%
-    left_join(df_pcode, by = c("ref_pcode" = "pcode"))
+    left_join(df_pcode, by = c("t_r_iso3" = "adm0_name", "ref_pcode" = "pcode"))
 
 
   ## return --------------------------------------------------------------------

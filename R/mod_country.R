@@ -1,19 +1,33 @@
 
 mod_country_profile_ui <- function(id) {
   ns <- NS(id)
-  start_date <- Sys.Date() - lubridate::years(3) # as.Date("2021-07-03")
-  end_date <- Sys.Date() # as.Date("2023-02-01")
-  # test_date <- as.Date("2021-12-01")
-  # div(
-  #   class = "container",
+
+  countries <- df_country_profile |> 
+    distinct(country_code, country_name) |> 
+    drop_na() |> 
+    arrange(country_name) %>%
+    dplyr::pull(country_code)
+
+  init_country <- "CMR"
+
+  start_date <- df_country_profile |> 
+    filter(country_code == init_country) |> 
+    pull(date_min) |> 
+    min(na.rm = TRUE)
+
+  end_date <- Sys.Date() 
+
   bslib::layout_sidebar(
     fillable = FALSE,
     sidebar = bslib::sidebar(
       shinyWidgets::pickerInput(
         inputId = ns("country"),
         label = "Country",
-        choices = NULL,
-        options = picker_opts(actions = FALSE, search = TRUE)
+        choices = countries,
+        choicesOpt = list(
+          content = purrr::map(countries, flag_country)
+        ),
+        options = picker_opts(actions = FALSE, search = TRUE, style = "btn-outline-success")
       ),
       shiny::sliderInput(
         inputId = ns("time_period"),
@@ -23,14 +37,14 @@ mod_country_profile_ui <- function(id) {
         value = c(start_date, end_date),
         width = "100%",
         timeFormat = "%d/%m/%y"
-      ),
-      shinyWidgets::radioGroupButtons(
-        ns("period_jump"),
-        label = "Jump to last:",
-        choices = c("3 years" = 3*12, "1 year" = 12, "6 months" = 6),
-        size = "sm",
-        status = "outline-success"
       )
+      # shinyWidgets::radioGroupButtons(
+      #   ns("period_jump"),
+      #   label = "Jump to last:",
+      #   choices = c("Full period" = 0, "3 years" = 3*12, "1 year" = 12, "6 months" = 6),
+      #   size = "sm",
+      #   status = "outline-success"
+      # )
       # shiny::helpText("Jump to last:"),
       # actionButton(ns("period_6m"), "6 months", class = "btn-sm"),
       # actionButton(ns("period_1y"), "1 year", class = "btn-sm"),
@@ -182,69 +196,89 @@ mod_country_profile_ui <- function(id) {
   )
 }
 
-mod_country_profile_server <- function(id, df_country_profile) {
+mod_country_profile_server <- function(id, prep_dat) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
     
     # OBSERVERS ================================
 
-    observe({
-      countries <- df_country_profile |> 
-        distinct(ref_adm0_name) |> 
-        drop_na() |> 
-        left_join(
-          countrycode::codelist %>% transmute(ref_adm0_name = iso3c, country = cow.name),
-          by = "ref_adm0_name"
-        ) %>%
-        arrange(country) %>%
-        dplyr::pull(ref_adm0_name)
+    # observe({
+    #   countries <- prep_dat |> 
+    #     distinct(ref_adm0_name) |> 
+    #     drop_na() |> 
+    #     left_join(
+    #       countrycode::codelist %>% transmute(ref_adm0_name = iso3c, country = cow.name),
+    #       by = "ref_adm0_name"
+    #     ) %>%
+    #     arrange(country) %>%
+    #     dplyr::pull(ref_adm0_name)
 
-      shinyWidgets::updatePickerInput(
-        session = session,
-        inputId = "country",
-        choices = countries,
-        choicesOpt = list(
-          content = purrr::map(countries, flag_country)
-        )
-      )
-    })
-    
-    observeEvent(input$period_jump, {
-      date_range <- c(Sys.Date() - lubridate::period(as.numeric(input$period_jump), "months"), Sys.Date())
+    #   shinyWidgets::updatePickerInput(
+    #     session = session,
+    #     inputId = "country",
+    #     choices = countries,
+    #     choicesOpt = list(
+    #       content = purrr::map(countries, flag_country)
+    #     )
+    #   )
+    # })
+
+    observe({
+      dmin <- prep_dat |> 
+        filter(country_code == input$country) |> 
+        pull(date_min) |> 
+        min(na.rm = TRUE)
+      # min_select <- dplyr::if_else(
+      #   input$period_jump == 0,
+      #   dmin,
+      #   Sys.Date() - lubridate::period(as.numeric(input$period_jump), "months")
+      # )
+      # if (min_select < dmin) min_select <- dmin
       updateSliderInput(
         session,
         "time_period",
-        value = date_range,
-        timeFormat = "%d/%m/%y"
+        min = dmin,
+        max = Sys.Date(),
+        value = c(dmin, Sys.Date())
       )
-    })
+    }) |> bindEvent(input$country, ignoreInit = TRUE)
     
-    observeEvent(input$period_6m, {
-      date_range <- c(Sys.Date() - lubridate::period(6, "months"), Sys.Date())
-      updateSliderInput(
-        session,
-        "time_period",
-        value = date_range
-      )
-    })
+    # observeEvent(input$period_jump, ignoreInit = TRUE, {
+    #   date_range <- c(Sys.Date() - lubridate::period(as.numeric(input$period_jump), "months"), Sys.Date())
+    #   updateSliderInput(
+    #     session,
+    #     "time_period",
+    #     value = date_range,
+    #     timeFormat = "%d/%m/%y"
+    #   )
+    # })
     
-    observeEvent(input$period_1y, {
-      date_range <- c(Sys.Date() - lubridate::period(1, "year"), Sys.Date())
-      updateSliderInput(
-        session,
-        "time_period",
-        value = date_range
-      )
-    })
+    # observeEvent(input$period_6m, {
+    #   date_range <- c(Sys.Date() - lubridate::period(6, "months"), Sys.Date())
+    #   updateSliderInput(
+    #     session,
+    #     "time_period",
+    #     value = date_range
+    #   )
+    # })
     
-    observeEvent(input$period_3y, {
-      date_range <- c(Sys.Date() - lubridate::period(3, "years"), Sys.Date())
-      updateSliderInput(
-        session,
-        "time_period",
-        value = date_range
-      )
-    })
+    # observeEvent(input$period_1y, {
+    #   date_range <- c(Sys.Date() - lubridate::period(1, "year"), Sys.Date())
+    #   updateSliderInput(
+    #     session,
+    #     "time_period",
+    #     value = date_range
+    #   )
+    # })
+    
+    # observeEvent(input$period_3y, {
+    #   date_range <- c(Sys.Date() - lubridate::period(3, "years"), Sys.Date())
+    #   updateSliderInput(
+    #     session,
+    #     "time_period",
+    #     value = date_range
+    #   )
+    # })
     
     observeEvent(country_df(), {
       shinyWidgets::updatePickerInput(
@@ -254,10 +288,7 @@ mod_country_profile_server <- function(id, df_country_profile) {
       )
     })
     
-    # PREPARE DATA =============================
-    
-    # prepare the data
-    prep_dat <- prep_data(df_country_profile)
+
     
     # filter the data for the selected country and date range
     country_df <- reactive({
@@ -269,7 +300,7 @@ mod_country_profile_server <- function(id, df_country_profile) {
           between(date_start_d1, date_range[1], date_range[2]) |
             between(date_start_d2, date_range[1], date_range[2])
         )
-    })
+    }) |> bindEvent(input$time_period)
     
     #filter the admin dict for country 
     admin_country <- reactive({ 
@@ -277,7 +308,7 @@ mod_country_profile_server <- function(id, df_country_profile) {
       admin_dict %>% 
         filter(adm0_iso3 == input$country) %>%  
         select(c(adm1_level, adm2_level, adm3_level)) 
-    }) 
+    })
     
     admin_label <- reactive({unlist(admin_country()[1,])})
     
@@ -291,7 +322,11 @@ mod_country_profile_server <- function(id, df_country_profile) {
     latest_camp <- reactive({
       req(nrow(country_df()) > 0)
       request_summ() %>%
-        filter(date_end_d2 == max(date_end_d2))
+        # rowwise() |> 
+        # mutate(date_latest = max(c_across(contains("date_start")), na.rm = TRUE)) |> 
+        # ungroup() |> 
+        filter(date_max == max(date_max, na.rm = TRUE)) |> 
+        slice_head(n = 1)
     })
     
     # summarise all rounds using the request summary
@@ -316,7 +351,7 @@ mod_country_profile_server <- function(id, df_country_profile) {
     
     output$camp_displayed_info <- renderText({
 
-            n_req_country <- reactive({ nrow(app_data$request %>% filter(iso_a3 == input$country, r_status == "Approved")) })
+      n_req_country <- reactive({ nrow(app_data$request %>% filter(iso_a3 == input$country, r_status == "Approved")) })
       
       percent_lab <- scales::percent( nrow(request_summ()) /n_req_country(), accuracy = 1)
       
@@ -356,10 +391,13 @@ mod_country_profile_server <- function(id, df_country_profile) {
     })
     
     output$last_camp <- renderText({
+
+      req(latest_camp())
+      # browser()
       
-      date_var <- if( latest_camp()$n_rounds == "two doses" ) { sym("date_end_d2") } else { sym("date_end_d1") }
+      # date_var <- if( latest_camp()$n_rounds == "two doses" ) { sym("date_end_d2") } else { sym("date_end_d1") }
       
-      date_end <- latest_camp() %>% pull(!!date_var)
+      date_end <- latest_camp() %>% pull(date_max)
       
       length <- time_length(lubridate::interval(date_end, Sys.Date()), "days")
       
@@ -375,17 +413,19 @@ mod_country_profile_server <- function(id, df_country_profile) {
     
     output$last_camp_info <- renderText({
       
-      n_var <- if( latest_camp()$n_rounds == "two doses" ) { sym("n_d2") } else { sym("n_d1") }
-      n_label <- if(n_var == "n_d2") { "second"} else { "first" }
+      # n_var <- if( latest_camp()$n_rounds == "two doses" ) { sym("n_d2") } else { sym("n_d1") }
+      # n_label <- if(n_var == "n_d2") { "second"} else { "first" }
       
-      glue::glue("{ fmt_n_dose( latest_camp() %>% pull(!!n_var) ) } {n_label} doses ")
+      glue::glue("{ fmt_n_dose( latest_camp()$n_d1 ) } 1st doses. { fmt_n_dose( latest_camp()$n_d2 ) } 2nd doses.")
       
     })
     
     # TIMEVIS/BARCHART ==========================
     
     output$timevis <- timevis::renderTimevis({
+      req(nrow(country_df()) > 0)
       validate(need(nrow(country_df()) > 0, "No data to display"))
+
       df_tv <- country_df() %>%
         select(group = request_id, contains("date_")) %>%
         tibble::rowid_to_column() %>%
@@ -474,7 +514,6 @@ mod_country_profile_server <- function(id, df_country_profile) {
     
     # prepare the data for map
     map_df <- reactive({
-      req(input$country)
       req(country_df())
       if (length(input$campaign)) {
         map_df <- get_map_data(
@@ -531,7 +570,7 @@ mod_country_profile_server <- function(id, df_country_profile) {
     # MAP
     output$map <- leaflet::renderLeaflet({
       
-      bbox <- sf::st_bbox(isolate(filter(sf_world, country == "Cameroon")))
+      bbox <- sf::st_bbox(filter(sf_world, iso_a3 == "CMR"))
       
       leaflet::leaflet() %>%
         leaflet::fitBounds(bbox[["xmin"]], bbox[["ymin"]], bbox[["xmax"]], bbox[["ymax"]]) %>%
@@ -555,7 +594,7 @@ mod_country_profile_server <- function(id, df_country_profile) {
       # leaflet::addProviderTiles("OpenStreetMap", group = "OSM") %>%
       # leaflet::addProviderTiles("OpenStreetMap.HOT", group = "OSM HOT") %>%
       # leaflet.extras::addFullscreenControl(position = "topleft") %>%
-    })
+    }) 
     
     # Observe the map
     observe({
@@ -772,7 +811,15 @@ prep_data <- function(target_area_df) {
       comments = t_comments
     ) %>%
     # add a variable saying if there is one or two dose for the campaign
-    mutate(n_rounds = if_else(if_any(c(date_start_d1, date_start_d2), ~ is.na(.x)), "one dose", "two doses")) %>%
+    mutate(
+      n_rounds = if_else(
+        if_any(c(date_start_d1, date_start_d2), ~ is.na(.x)),
+        "one dose",
+        "two doses"
+      ),
+      date_end_d1 = coalesce(date_end_d1, date_start_d1),
+      date_end_d2 = coalesce(date_end_d2, date_start_d2)
+    ) %>%
     # aggregate to admin3 level
     group_by(
       country_code,
@@ -795,13 +842,19 @@ prep_data <- function(target_area_df) {
       adm3_pcode
     ) %>%
     summarise(
-      across(where(is.numeric), ~ sum(.x)),
+      across(where(is.numeric), ~ sum(.x, na.rm = TRUE)),
       .groups = "drop"
     ) %>%
     mutate(
       d1_cov_adm = d1_dose_adm / target_pop,
       d2_cov_adm = d2_dose_adm / target_pop
-    )
+    ) |> 
+    rowwise() |> 
+    mutate(
+      date_min = min(c_across(contains("date_")), na.rm = TRUE),
+      date_max = max(c_across(contains("date_")), na.rm = TRUE)
+    ) |> 
+    ungroup()
 }
 
 # function that summarize the requests by a country
@@ -809,22 +862,29 @@ get_request_summ <- function(country_df) {
   req_summ <- country_df %>%
     group_by(country_name, request_id) %>%
     summarise(
-      date_start_d1 = min(date_start_d1),
-      date_end_d1 = max(date_end_d1),
-      date_start_d2 = min(date_start_d2),
-      date_end_d2 = max(date_end_d2),
+      date_start_d1 = min(date_start_d1, na.rm = TRUE),
+      date_end_d1 = max(date_end_d1, na.rm = TRUE),
+      date_start_d2 = min(date_start_d2, na.rm = TRUE),
+      date_end_d2 = max(date_end_d2, na.rm = TRUE),
+      date_min = max(date_min, na.rm = TRUE),
+      date_max = max(date_max, na.rm = TRUE),
       n_rounds = unique(n_rounds),
       n_target_area = n(),
       n_adm1 = n_distinct(adm1_name, na.rm = TRUE),
       n_adm2 = n_distinct(adm2_name, na.rm = TRUE),
       n_adm3 = n_distinct(adm3_name, na.rm = TRUE),
-      smallest_target = if_else(n_adm3 == 0, "adm2", if_else(n_adm2 == 0, "adm1", "adm3")),
+      smallest_target = case_when(
+        n_adm3 > 0 ~ "adm3",
+        n_adm2 > 0 ~ "adm2",
+        n_adm1 > 0 ~ "adm1",
+        .default = "unknown"
+      ),
       campaign_type = unique(campaign_type),
       target_type = paste0(unique(target_type), collapse = ", "),
-      target_pop = sum(target_pop),
-      n_d1 = sum(d1_dose_adm),
+      target_pop = sum(target_pop, na.rm = TRUE),
+      n_d1 = sum(d1_dose_adm, na.rm = TRUE),
       cov_d1 = round(digits = 1, n_d1 / target_pop * 100),
-      n_d2 = sum(d2_dose_adm),
+      n_d2 = sum(d2_dose_adm, na.rm = TRUE),
       cov_d2 = round(digits = 1, n_d2 / target_pop * 100),
       .groups = "drop"
     ) %>%
@@ -894,24 +954,33 @@ summ_tab_data <- function(df) {
 # get the map data filtered and grouped
 
 get_map_data <- function(country_df, filter_var, admin_level) {
+
+  # browser()
   
   n_rounds <- unique(country_df$n_rounds)
   admin_sym <- sym(paste0(admin_level, "_pcode"))
   
   if (nrow(country_df) < 1) {
-    return(dplyr::tibble(!!admin_sym := character()))
+    return(dplyr::tibble(adm0_iso3 = character(), !!admin_sym := character()))
   }
   
-  df <- country_df %>%
-    group_by(!!admin_sym)
-  
+  df <- country_df %>% group_by(!!admin_sym)
+
   if (filter_var == "largest_pop") {
     df <- df %>% filter(target_pop == max(target_pop))
-  } else if (filter_var == "latest_date" & isTruthy(n_rounds == "one dose")) {
-    df <- df %>% filter(date_end_d1 == max(date_end_d1))
   } else {
-    df <- df %>% filter(date_end_d2 == max(date_end_d2))
+    df <- df %>% 
+      mutate(date_end = coalesce(date_end_d2, date_end_d1, date_start_d2, date_start_d1)) |> 
+      filter(date_end == max(date_end))
   }
+  
+  # if (filter_var == "largest_pop") {
+  #   df <- df %>% filter(target_pop == max(target_pop))
+  # } else if (filter_var == "latest_date" & isTruthy(n_rounds == "one dose")) {
+  #   df <- df %>% filter(date_end_d1 == max(date_end_d1))
+  # } else {
+  #   df <- df %>% filter(date_end_d2 == max(date_end_d2))
+  # }
   
   df %>%
     group_by(request_id, adm0_iso3 = country_code, !!admin_sym) %>% 
@@ -952,6 +1021,12 @@ get_map_data <- function(country_df, filter_var, admin_level) {
       )
     )
 }
+
+# get_map_data(
+#   df_country_profile |> filter(country_code == "COD"),
+#   "latest_date",
+#   "adm1"
+# )
 
 # define variables
 bar_var <- c("Doses counts" = "n", "Coverage" = "cov")

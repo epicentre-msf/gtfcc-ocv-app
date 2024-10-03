@@ -37,7 +37,12 @@ flag_country <- function(iso3) {
   shiny::HTML(paste(tags$img(src = url, width = 20, height = 15), cname))
 }
 
-picker_opts <- function(actions = TRUE, search = FALSE, none_text = "All", selected_text = "selected", style = "btn-sm btn-outline-success", ...) {
+picker_opts <- function(actions = TRUE,
+                        search = FALSE,
+                        none_text = "All",
+                        selected_text = "selected",
+                        style = "btn-sm btn-outline-success",
+                        ...) {
   shinyWidgets::pickerOptions(
     actionsBox = actions,
     liveSearch = search,

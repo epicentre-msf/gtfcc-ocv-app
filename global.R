@@ -16,6 +16,7 @@ library(gtsummary)
 library(shinyscreenshot)
 library(timevis)
 source(here::here("R", "utils_data.R"))
+source(here::here("R", "mod_country.R"))
 
 app_name <- "gtfcc_ocv"
 app_title <- "GTFCC OCV"
@@ -43,6 +44,7 @@ df_request <- app_data$request
 df_round <- app_data$campaign_and_round
 df_shipment <- app_data$shipment
 df_timevis <- app_data$df_timevis
+df_country_profile <- app_data$df_country_profile |> prep_data()
 
 q_range <- get_q_range(c(
   df_request$r_date_receipt,
