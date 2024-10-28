@@ -20,6 +20,7 @@ mod_request_ui <- function(id) {
         ),
         bslib::accordion_panel(
           title = "Category filters",
+          multiple = FALSE,
           shinyWidgets::pickerInput(
             inputId = ns("region"),
             label = "Region",
@@ -458,8 +459,9 @@ mod_request_server <- function(id) {
       if (length(input$vaccine)) {
         vacc_filter <- df_shipment %>%
           filter(s_vaccine %in% input$vaccine) %>%
-          distinct(r_demand_id = s_r_demand_id)
-        df %<>% semi_join(vacc_filter, by = "r_demand_id")
+          group_by(r_demand_id = s_r_demand_id) %>% 
+          summarise(s_dose_ship = sum(s_dose_ship, na.rm = TRUE), .groups = "drop")
+        df %<>% select(-s_dose_ship) %>% inner_join(vacc_filter, by = "r_demand_id")
       }
 
       return(df)
@@ -775,7 +777,11 @@ mod_request_server <- function(id) {
       req(input$ts_date, cancelOutput = TRUE)
 
       if (input$var == "Doses" & input$ts_date == "s_date_delivery") {
-        df <- df_shipment %>%
+        df_ship <- df_shipment
+        if (length(isolate(input$vaccine))) {
+          df_ship <- df_ship %>% filter(s_vaccine %in% isolate(input$vaccine))
+        }
+        df <- df_ship %>%
           inner_join(
             df_data() %>% distinct(r_demand_id, r_mechanism, r_mechanism_type, r_status),
             by = c("s_r_demand_id" = "r_demand_id")
