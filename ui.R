@@ -2,7 +2,10 @@ ui <- tagList(
   tags$head(
     tags$style(
       # body {padding-top: 70px !important;} 
-      "body {padding-top: 50px !important;} .value-box-area {padding: 5px !important;} .card-body {padding: 0 !important;}"
+      "body {padding-top: 50px !important;} 
+      .value-box-area {padding: 5px !important;} 
+      .card-body {padding: 0 !important;}
+      .shiny-input-container {font-size: 1.2rem !important;}"
     ),
     # tags$link(href = google_font(p_font), rel = "stylesheet"),
     tags$style(
@@ -35,7 +38,7 @@ ui <- tagList(
       ),
       success = SUCCESS,
       warning = WARNING,
-      font_scale = 0.8,
+      # font_scale = 0.8,
       bootswatch = "litera"
     ),
     

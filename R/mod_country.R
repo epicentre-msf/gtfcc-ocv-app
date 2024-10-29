@@ -6,7 +6,8 @@ mod_country_profile_ui <- function(id) {
     distinct(country_code, country_name) |> 
     drop_na() |> 
     arrange(country_name) %>%
-    dplyr::pull(country_code)
+    dplyr::pull(country_code) |> 
+    unique()
 
   init_country <- "CMR"
 
@@ -17,38 +18,62 @@ mod_country_profile_ui <- function(id) {
 
   end_date <- Sys.Date() 
 
-  bslib::layout_sidebar(
-    fillable = FALSE,
-    sidebar = bslib::sidebar(
+  div(
+    class = "mx-5",
+    # fillable = FALSE,
+    # sidebar = bslib::sidebar(
+    #   shinyWidgets::pickerInput(
+    #     inputId = ns("country"),
+    #     label = "Country",
+    #     choices = countries,
+    #     choicesOpt = list(
+    #       content = purrr::map(countries, flag_country)
+    #     ),
+    #     options = picker_opts(actions = FALSE, search = TRUE, style = "btn-outline-success")
+    #   ),
+    #   shiny::sliderInput(
+    #     inputId = ns("time_period"),
+    #     label = "Time period",
+    #     min = start_date,
+    #     max = end_date,
+    #     value = c(start_date, end_date),
+    #     width = "100%",
+    #     timeFormat = "%d/%m/%y"
+    #   )
+    #   # shinyWidgets::radioGroupButtons(
+    #   #   ns("period_jump"),
+    #   #   label = "Jump to last:",
+    #   #   choices = c("Full period" = 0, "3 years" = 3*12, "1 year" = 12, "6 months" = 6),
+    #   #   size = "sm",
+    #   #   status = "outline-success"
+    #   # )
+    #   # shiny::helpText("Jump to last:"),
+    #   # actionButton(ns("period_6m"), "6 months", class = "btn-sm"),
+    #   # actionButton(ns("period_1y"), "1 year", class = "btn-sm"),
+    #   # actionButton(ns("period_3y"), "3 year", class = "btn-sm")
+    # ),
+    bslib::layout_column_wrap(
+      width = 1/2,
+      class = "text-center align-items-end",
       shinyWidgets::pickerInput(
         inputId = ns("country"),
-        label = "Country",
+        label = NULL, # tags$h5("Country"),
         choices = countries,
         choicesOpt = list(
           content = purrr::map(countries, flag_country)
         ),
-        options = picker_opts(actions = FALSE, search = TRUE, style = "btn-outline-success")
+        options = picker_opts(actions = FALSE, search = TRUE, style = "btn-lg"), # btn-outline-success
+        width = "100%"
       ),
       shiny::sliderInput(
         inputId = ns("time_period"),
-        label = "Time period",
+        label = NULL, # "Time period",
         min = start_date,
         max = end_date,
         value = c(start_date, end_date),
         width = "100%",
-        timeFormat = "%d/%m/%y"
+        timeFormat = "%d/%m/%Y"
       )
-      # shinyWidgets::radioGroupButtons(
-      #   ns("period_jump"),
-      #   label = "Jump to last:",
-      #   choices = c("Full period" = 0, "3 years" = 3*12, "1 year" = 12, "6 months" = 6),
-      #   size = "sm",
-      #   status = "outline-success"
-      # )
-      # shiny::helpText("Jump to last:"),
-      # actionButton(ns("period_6m"), "6 months", class = "btn-sm"),
-      # actionButton(ns("period_1y"), "1 year", class = "btn-sm"),
-      # actionButton(ns("period_3y"), "3 year", class = "btn-sm")
     ),
     bslib::layout_column_wrap(
       width = 1 / 5,
@@ -95,8 +120,10 @@ mod_country_profile_ui <- function(id) {
     ),
     
     bslib::layout_columns(
-      col_widths = c(6, 6, 6, 6),
-      row_heights = c(2, 3),
+      # col_widths = c(6, 6, 6, 6),
+      # row_heights = c(2, 3),
+      col_widths = c(6, 6),
+      fillable = FALSE,
       bslib::card(
         full_screen = TRUE,
         bslib::card_header(
@@ -123,7 +150,10 @@ mod_country_profile_ui <- function(id) {
           )
         ),
         bslib::card_body(padding = 0, highcharter::highchartOutput(ns("chart"), height = 300))
-      ),
+      )
+    ),
+    bslib::layout_columns(
+      col_widths = c(6, 6),
       bslib::card(
         full_screen = TRUE,
         bslib::card_header(
