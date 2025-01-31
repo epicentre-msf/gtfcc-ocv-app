@@ -23,13 +23,14 @@ df_obt_exports <-
     !is.na(pcode_adm1_t_target_area),
     !is.na(t_d1_date_round_start) | !is.na(t_d2_date_round_start)
   ) |> 
-  clean_geo(paths)
+  clean_geo(paths) |> 
+  mutate(source = "OBT", .before = 1)
 
 
 # retrospective data
 path_retro <- path(paths$proj, "data-clean", "database", "multicountry_June_2024.rds")
 df_retro_raw <- read_rds(path_retro)
-setdiff(names(df_retro), names(df_country_profile))
+setdiff(names(df_retro_raw), names(df_obt_exports))
 
 ignore_ids <- df_obt_exports |> semi_join(df_retro_raw, by = "t_r_id") |> distinct(t_r_id) 
 
@@ -75,10 +76,11 @@ df_retro <- df_retro_raw |>
     across(contains("date"), as_date),
     adm1_t_target_area = stringr::str_remove(adm1_t_target_area, "^[A-Z]{3}(?=\\s)")
   ) |> 
-  clean_geo(paths)
+  clean_geo(paths) |> 
+  mutate(source = "retrospective", .before = 1)
 
 
-df_country_profile <- bind_rows(df_obt_exports, df_retro)
+df_country_profile <- bind_rows(df_obt_exports, df_retro |> select(-r_id))
 
 # save data
 app_data <- read_rds(here::here("data", "app_data.rds"))
@@ -89,6 +91,8 @@ write_rds(app_data, path("data", "app_data", ext = "rds"))
 
 # build the geobase
 countries <- unique(app_data$df_country_profile$ref_adm0_name)
+current_countries <- unique(read_rds(path("data", "geo_data", ext = "rds"))$adm1$sf$adm0_iso3)
+setdiff(countries, current_countries)
 
 geo_path <- "~/epicentre/outbreak-tools-geoapp/data/geoparquet/"
 
@@ -103,6 +107,16 @@ app_data$df_country_profile |>
   filter(t_r_iso3 == "MWI") |> 
   qxl::qxl(
     file = path(paths$proj, "data-clean", "sub-national", "gtfcc-ocv-mwi", ext = "xlsx")
+  )
+
+app_data$df_country_profile |> 
+  qxl::qxl(
+    file = path(paths$proj, "data-clean", "sub-national", "gtfcc-ocv-all", ext = "xlsx")
+  )
+
+app_data$df_country_profile |> 
+  saveRDS(
+    file = path(paths$proj, "data-clean", "sub-national", "gtfcc-ocv-all", ext = "rds")
   )
 
 app_data$df_country_profile |> 

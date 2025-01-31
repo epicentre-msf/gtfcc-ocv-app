@@ -4,9 +4,14 @@ library(readxl)
 source(here::here("R", "utils_data.R"))
 
 path_sharepoint <- "~/MSF/EpiDS - GTFCC-OCV/data-clean/export4dashboard/"
-path_data <- max(dir_ls(path_sharepoint, regexp = "gtfcc_ocv_data_dashoard__.*.xlsx"))
+files_gtfcc <- dir_ls(path_sharepoint, regexp = "gtfcc_ocv_data_dashoard__.*.xlsx")
+files_dt <- file_info(files_gtfcc)$birth_time
+path_data <- files_gtfcc[files_dt == max(files_dt)]
+path_file(path_data)
+# (path_data <- max(dir_ls(path_sharepoint, regexp = "gtfcc_ocv_data_dashoard__.*.xlsx")))
 
-date_updated <- fs::file_info(path_data)$modification_time %>% lubridate::as_date()
+date_updated <- as_date(str_extract(path_data, "\\d{8}"))
+# date_updated <- fs::file_info(path_data)$birth_time %>% lubridate::as_date()
 write_rds(date_updated, here::here("data", "date_updated.rds"))
 
 data_sheets <- c("Request", "Shipment", "Campaign and round")
@@ -43,8 +48,7 @@ df_vaccine <- dat$shipment %>%
   group_by(s_r_demand_id) %>% 
   summarise(s_vaccine = paste(s_vaccine, collapse = ", "), .groups = "drop")
 
-df_info <- dat$request %>% 
-  
+df_info <- dat$request %>%   
   distinct(
     r_demand_id,
     r_who_region,
@@ -83,17 +87,17 @@ df_delay <- df_info %>%
 
 # Country profile data ----------------------------------------------------
 
-path_country_data <- max(fs::dir_ls("~/MSF/EpiDS - GTFCC-OCV/data-clean/rds/", regexp = "data_target_areas_.*.rds"))
+# path_country_data <- max(fs::dir_ls("~/MSF/EpiDS - GTFCC-OCV/data-clean/rds/", regexp = "data_target_areas_.*.rds"))
 
-df_country_profile <- read_rds(path_country_data)
+# df_country_profile <- read_rds(path_country_data)
 
 app_data <- c(
   dat,
   tibble::lst(
     df_info,
     df_timevis,
-    df_delay, 
-    df_country_profile
+    df_delay
+    # df_country_profile
   )
 )
 
