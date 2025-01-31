@@ -1,5 +1,13 @@
 ui <- tagList(
   tags$head(
+    # google analytics tracking =====================================
+    shiny::tags$script(
+      src = "https://www.googletagmanager.com/gtag/js?id=G-KL75W95QQF",
+      async = ""
+    ),
+    shiny::tags$script(
+      src = "js/ga.js"
+    ),
     tags$style(".value-box-area {padding: 5px !important;}"),
     # tags$link(href = google_font(p_font), rel = "stylesheet"),
     tags$style(
