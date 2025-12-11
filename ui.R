@@ -9,11 +9,12 @@ ui <- tagList(
       src = "js/ga.js"
     ),
     tags$style(
-      # body {padding-top: 70px !important;} 
+      # body {padding-top: 70px !important;}
       "body {padding-top: 50px !important;} 
       .value-box-area {padding: 5px !important;} 
       .card-body {padding: 0 !important;}
-      .shiny-input-container {font-size: 1.2rem !important;}"
+      .shiny-input-container {font-size: 1.2rem !important;}
+      .dropdown-menu {z-index: 10000 !important;}"
     ),
     # tags$link(href = google_font(p_font), rel = "stylesheet"),
     tags$style(
@@ -23,7 +24,7 @@ ui <- tagList(
     waiter::use_waiter(),
     sever::useSever()
   ),
-  
+
   page_navbar(
     title = tagList(
       app_title,
@@ -40,7 +41,7 @@ ui <- tagList(
     position = "fixed-top",
     theme = bs_theme(
       base_font = font_google(
-        app_font, 
+        app_font,
         wght = c(300, 400, 500, 600, 700, 800),
         ital = c(0, 1)
       ),
@@ -49,18 +50,24 @@ ui <- tagList(
       # font_scale = 0.8,
       bootswatch = "litera"
     ),
-    
+
     # navbar tabs here
     nav_panel(
-      title = "Requests", value = "request", icon = icon("list"),
+      title = "Requests",
+      value = "request",
+      icon = icon("list"),
       mod_request_ui("request")
     ),
     nav_panel(
-      title = "Timeline", value = "timevis", icon = icon("chart-column"),
+      title = "Timeline",
+      value = "timevis",
+      icon = icon("chart-column"),
       mod_timevis_ui("timevis")
     ),
     nav_panel(
-      title = "Country Profile", value = "country", icon = icon("globe-africa"),
+      title = "Country Profile",
+      value = "country",
+      icon = icon("globe-africa"),
       mod_country_profile_ui("country")
     ),
     nav_spacer(),
