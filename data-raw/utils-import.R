@@ -1,41 +1,52 @@
 set_paths <- function(info = Sys.info()) {
-  
   # get onedrive path from .Renviron
   paths <- list(
     onedrive = Sys.getenv("SHAREPOINT_PATH")
   )
-  
+
   if (paths$onedrive == "") {
     stop("Missing SHAREPOINT_PATH variable in .Renviron. See ?usethis::edit_r_environ()")
   }
-  
+
   # is server
   paths$is_server <- ifelse(info[["nodename"]] == "ip-10-0-3-151", TRUE, FALSE)
-  
-  # geo 
+
+  # geo
   paths$obtools_geo <- file.path(paths$onedrive, "OutbreakTools - GeoBase")
 
   # /proj/
-  paths$proj       <- file.path(paths$onedrive, "EpiDS - GTFCC-OCV")
-  paths$cleaning   <- file.path(paths$proj, "data-cleaning", "country")
-  
+  paths$proj <- file.path(paths$onedrive, "EpiDS - GTFCC-OCV")
+  paths$cleaning <- file.path(paths$proj, "data-cleaning", "country")
+
   # /proj/data-cleaning/
   paths$dictionaries <- file.path(paths$cleaning, "dictionaries")
-  paths$corrections  <- file.path(paths$cleaning, "corrections")
-  paths$compilation  <- file.path(paths$cleaning, "compilation")
-  
-  paths$cleaning_dates    <- file.path(paths$corrections, "dates")
+  paths$corrections <- file.path(paths$cleaning, "corrections")
+  paths$compilation <- file.path(paths$cleaning, "compilation")
+
+  paths$cleaning_dates <- file.path(paths$corrections, "dates")
   paths$cleaning_geocodes <- file.path(paths$corrections, "geocodes")
 
   ## create dirs that don't yet exist ------------------------------------------
-  if (!dir.exists(paths$cleaning)) dir.create(paths$cleaning, recursive = TRUE)
-  
-  if (!dir.exists(paths$dictionaries)) dir.create(paths$dictionaries)
-  if (!dir.exists(paths$corrections)) dir.create(paths$corrections)
-  if (!dir.exists(paths$compilation)) dir.create(paths$compilation)
-  
-  if (!dir.exists(paths$cleaning_dates)) dir.create(paths$cleaning_dates)
-  if (!dir.exists(paths$cleaning_geocodes)) dir.create(paths$cleaning_geocodes)
+  if (!dir.exists(paths$cleaning)) {
+    dir.create(paths$cleaning, recursive = TRUE)
+  }
+
+  if (!dir.exists(paths$dictionaries)) {
+    dir.create(paths$dictionaries)
+  }
+  if (!dir.exists(paths$corrections)) {
+    dir.create(paths$corrections)
+  }
+  if (!dir.exists(paths$compilation)) {
+    dir.create(paths$compilation)
+  }
+
+  if (!dir.exists(paths$cleaning_dates)) {
+    dir.create(paths$cleaning_dates)
+  }
+  if (!dir.exists(paths$cleaning_geocodes)) {
+    dir.create(paths$cleaning_geocodes)
+  }
 
   return(paths)
 }
@@ -72,20 +83,17 @@ import_country_data <- function(path, sheet = "Target areas") {
 #' Linelist with cleaned admin columns appended
 #'
 clean_geo <- function(dat, paths, write_checks = TRUE) {
-
   # when running manually ------------------------------------------------------
   if (FALSE) {
     dat <- ll_std
     write_checks <- FALSE
   }
 
-
   ## relevant cols -------------------------------------------------------------
   adm_cols_orig <- c("t_r_iso3", paste0("adm", 1:4, "_t_target_area"))
   adm_cols <- paste0("adm", 0:4, "_name")
   adm_cols_ref <- paste0("ref_", adm_cols)
   adm_cols_recode <- setNames(adm_cols_orig, adm_cols)
-
 
   ## assemble raw geo data -----------------------------------------------------
   dat_prep <- dat %>%
@@ -104,7 +112,6 @@ clean_geo <- function(dat, paths, write_checks = TRUE) {
     filter(!if_all(everything(), is.na)) %>%
     count(across(everything()))
 
-
   ## assemble ref geo data -----------------------------------------------------
   adm0_levels <- sort(unique(dat_prep$t_r_iso3))
   if (paths$is_server) {
@@ -113,13 +120,12 @@ clean_geo <- function(dat, paths, write_checks = TRUE) {
 
   geo_ref <- map(adm0_levels, ~ obtdata::fetch_georef(.x, path_onedrive = paths$onedrive)$ref) %>%
     list_rbind() %>%
-    # mutate(adm0_name = countrycode::countrycode(adm0_name, origin = "country.name", destination = "iso3c")) %>% 
+    # mutate(adm0_name = countrycode::countrycode(adm0_name, origin = "country.name", destination = "iso3c")) %>%
     # mutate(adm0_name = if_else(grepl("Yemen", adm0_name), "Yemen", adm0_name)) %>% # drop Arabic component from adm0 for YEM
     # mutate(adm1_name = paste(adm0_iso3, adm1_name)) %>%
-    mutate(adm0_name = adm0_iso3) |> 
+    mutate(adm0_name = adm0_iso3) |>
     select(level, all_of(adm_cols), pcode) %>%
     distinct(adm0_name, pcode, .keep_all = TRUE)
-
 
   # manual corrections --------------------------------------------------------
   # corr_geo <- qxl::qread(file.path(paths$corrections, "corr_geo.xlsx"), trim_ws = FALSE)
@@ -132,7 +138,6 @@ clean_geo <- function(dat, paths, write_checks = TRUE) {
   geo_man <- geo_man_full %>%
     filter(!is.na(pcode_new)) %>%
     select(all_of(adm_cols), pcode = pcode_new)
-
 
   # geomatching ---------------------------------------------------------------
   df_match <- geo_raw %>%
@@ -150,7 +155,6 @@ clean_geo <- function(dat, paths, write_checks = TRUE) {
       level_raw = hmatch::max_levels(., by = adm_cols),
       level_ref = hmatch::max_levels(., by = adm_cols_ref)
     )
-
 
   ## write unmatched levels to file --------------------------------------------
   geo_man_join <- geo_man_full %>%
@@ -199,7 +203,6 @@ clean_geo <- function(dat, paths, write_checks = TRUE) {
     }
   }
 
-
   ## bind matched admin levels and pcodes --------------------------------------
   geo_ref1 <- geo_ref %>%
     filter(level == 1) %>%
@@ -242,17 +245,27 @@ clean_geo <- function(dat, paths, write_checks = TRUE) {
     ) %>%
     left_join(df_pcode, by = c("t_r_iso3" = "adm0_name", "ref_pcode" = "pcode"))
 
-
   ## return --------------------------------------------------------------------
   dat_prep %>%
     left_join(df_ref_bind, by = adm_cols_orig)
 }
 
-pull_geo_data <- function(path, level, countries) {
-  arrow::open_dataset(fs::path(path, level)) |> 
-    dplyr::filter(adm0_iso3 %in% countries) |> 
-    sf::st_as_sf()
+pull_geo_data <- function(con, level, countries) {
+  require("geoarrow")
+  require("arrow")
+  sf_out <- dplyr::tbl(con, level) |>
+    dplyr::filter(adm0_iso3 %in% countries) |>
+    arrow::to_arrow() |>
+    sf::st_as_sf(crs = 4326)
+  # sf::st_crs(sf_out) <- 4326
+  sf_out
 }
+
+# pull_geo_data <- function(path, level, countries) {
+#   arrow::open_dataset(fs::path(path, level)) |>
+#     dplyr::filter(adm0_iso3 %in% countries) |>
+#     sf::st_as_sf()
+# }
 
 make_geo_layer <- function(lvl, geo_path, countries) {
   lvl_upper <- toupper(lvl)

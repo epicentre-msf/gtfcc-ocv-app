@@ -1,22 +1,21 @@
-
 mod_country_profile_ui <- function(id) {
   ns <- NS(id)
 
-  countries <- df_country_profile |> 
-    distinct(country_code, country_name) |> 
-    drop_na() |> 
+  countries <- df_country_profile |>
+    distinct(country_code, country_name) |>
+    drop_na() |>
     arrange(country_name) %>%
-    dplyr::pull(country_code) |> 
+    dplyr::pull(country_code) |>
     unique()
 
   init_country <- "CMR"
 
-  start_date <- df_country_profile |> 
-    filter(country_code == init_country) |> 
-    pull(date_min) |> 
+  start_date <- df_country_profile |>
+    filter(country_code == init_country) |>
+    pull(date_min) |>
     min(na.rm = TRUE)
 
-  end_date <- Sys.Date() 
+  end_date <- Sys.Date()
 
   div(
     class = "mx-5",
@@ -53,7 +52,7 @@ mod_country_profile_ui <- function(id) {
     #   # actionButton(ns("period_3y"), "3 year", class = "btn-sm")
     # ),
     bslib::layout_column_wrap(
-      width = 1/2,
+      width = 1 / 2,
       class = "text-center align-items-end",
       shinyWidgets::pickerInput(
         inputId = ns("country"),
@@ -109,7 +108,7 @@ mod_country_profile_ui <- function(id) {
         theme_color = "success",
         # showcase = health_icon("symbols/geo_location", type = "outline", height = 80)
         showcase = bs_icon("geo")
-      ), 
+      ),
       bslib::value_box(
         title = "Last campaign",
         value = textOutput(ns("last_camp")),
@@ -118,7 +117,7 @@ mod_country_profile_ui <- function(id) {
         showcase = bs_icon("clock-history")
       )
     ),
-    
+
     bslib::layout_columns(
       # col_widths = c(6, 6, 6, 6),
       # row_heights = c(2, 3),
@@ -159,14 +158,17 @@ mod_country_profile_ui <- function(id) {
         bslib::card_header(
           class = "d-flex align-items-center",
           tags$span(class = "me-auto pe-1 ", "Map"),
-          div(class = "pe-2", shinyWidgets::pickerInput(
-            ns("campaign"),
-            label = NULL,
-            choices = NULL,
-            options = picker_opts(actions = FALSE, search = FALSE, none_text = "All campaigns"),
-            width = 100,
-            multiple = TRUE
-          )),
+          div(
+            class = "pe-2",
+            shinyWidgets::pickerInput(
+              ns("campaign"),
+              label = NULL,
+              choices = NULL,
+              options = picker_opts(actions = FALSE, search = FALSE, none_text = "All campaigns"),
+              width = 100,
+              multiple = TRUE
+            )
+          ),
           bslib::popover(
             tags$span(class = "pe-1", bs_icon("gear"), "options"),
             title = "Map options",
@@ -229,13 +231,13 @@ mod_country_profile_ui <- function(id) {
 mod_country_profile_server <- function(id, prep_dat) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
-    
+
     # OBSERVERS ================================
 
     # observe({
-    #   countries <- prep_dat |> 
-    #     distinct(ref_adm0_name) |> 
-    #     drop_na() |> 
+    #   countries <- prep_dat |>
+    #     distinct(ref_adm0_name) |>
+    #     drop_na() |>
     #     left_join(
     #       countrycode::codelist %>% transmute(ref_adm0_name = iso3c, country = cow.name),
     #       by = "ref_adm0_name"
@@ -254,9 +256,9 @@ mod_country_profile_server <- function(id, prep_dat) {
     # })
 
     observe({
-      dmin <- prep_dat |> 
-        filter(country_code == input$country) |> 
-        pull(date_min) |> 
+      dmin <- prep_dat |>
+        filter(country_code == input$country) |>
+        pull(date_min) |>
         min(na.rm = TRUE)
       # min_select <- dplyr::if_else(
       #   input$period_jump == 0,
@@ -271,8 +273,9 @@ mod_country_profile_server <- function(id, prep_dat) {
         max = Sys.Date(),
         value = c(dmin, Sys.Date())
       )
-    }) |> bindEvent(input$country, ignoreInit = TRUE)
-    
+    }) |>
+      bindEvent(input$country, ignoreInit = TRUE)
+
     # observeEvent(input$period_jump, ignoreInit = TRUE, {
     #   date_range <- c(Sys.Date() - lubridate::period(as.numeric(input$period_jump), "months"), Sys.Date())
     #   updateSliderInput(
@@ -282,7 +285,7 @@ mod_country_profile_server <- function(id, prep_dat) {
     #     timeFormat = "%d/%m/%y"
     #   )
     # })
-    
+
     # observeEvent(input$period_6m, {
     #   date_range <- c(Sys.Date() - lubridate::period(6, "months"), Sys.Date())
     #   updateSliderInput(
@@ -291,7 +294,7 @@ mod_country_profile_server <- function(id, prep_dat) {
     #     value = date_range
     #   )
     # })
-    
+
     # observeEvent(input$period_1y, {
     #   date_range <- c(Sys.Date() - lubridate::period(1, "year"), Sys.Date())
     #   updateSliderInput(
@@ -300,7 +303,7 @@ mod_country_profile_server <- function(id, prep_dat) {
     #     value = date_range
     #   )
     # })
-    
+
     # observeEvent(input$period_3y, {
     #   date_range <- c(Sys.Date() - lubridate::period(3, "years"), Sys.Date())
     #   updateSliderInput(
@@ -309,7 +312,7 @@ mod_country_profile_server <- function(id, prep_dat) {
     #     value = date_range
     #   )
     # })
-    
+
     observeEvent(country_df(), {
       shinyWidgets::updatePickerInput(
         session,
@@ -317,9 +320,7 @@ mod_country_profile_server <- function(id, prep_dat) {
         choices = request_summ()$request_id
       )
     })
-    
 
-    
     # filter the data for the selected country and date range
     country_df <- reactive({
       req(input$country)
@@ -330,128 +331,129 @@ mod_country_profile_server <- function(id, prep_dat) {
           between(date_start_d1, date_range[1], date_range[2]) |
             between(date_start_d2, date_range[1], date_range[2])
         )
-    }) |> bindEvent(input$time_period)
-    
-    #filter the admin dict for country 
-    admin_country <- reactive({ 
+    }) |>
+      bindEvent(input$time_period)
+
+    #filter the admin dict for country
+    admin_country <- reactive({
       req(input$country)
-      admin_dict %>% 
-        filter(adm0_iso3 == input$country) %>%  
-        select(c(adm1_level, adm2_level, adm3_level)) 
+      admin_dict %>%
+        filter(adm0_iso3 == input$country) %>%
+        select(c(adm1_level, adm2_level, adm3_level))
     })
-    
-    admin_label <- reactive({unlist(admin_country()[1,])})
-    
+
+    admin_label <- reactive({
+      unlist(admin_country()[1, ])
+    })
+
     # summarise the campaigns (using request id) for the country df
     request_summ <- reactive({
       req(nrow(country_df()) > 0)
       get_request_summ(country_df())
     })
-    
+
     # get the latest campaign
     latest_camp <- reactive({
       req(nrow(country_df()) > 0)
       request_summ() %>%
-        # rowwise() |> 
-        # mutate(date_latest = max(c_across(contains("date_start")), na.rm = TRUE)) |> 
-        # ungroup() |> 
-        filter(date_max == max(date_max, na.rm = TRUE)) |> 
+        # rowwise() |>
+        # mutate(date_latest = max(c_across(contains("date_start")), na.rm = TRUE)) |>
+        # ungroup() |>
+        filter(date_max == max(date_max, na.rm = TRUE)) |>
         slice_head(n = 1)
     })
-    
+
     # summarise all rounds using the request summary
     rounds_summ <- reactive({
       req(request_summ())
       get_rounds_summ(request_summ())
     })
-    
+
     # get unique admin targeted for the country_df
     unique_admin <- reactive({
       req(nrow(country_df()) > 0)
       get_unique_admin(country_df())
     })
-    
+
     # VALUE BOXES ==============================
-    
-    rounds_summ <- reactive({ get_rounds_summ(request_summ()) })
-    
+
+    rounds_summ <- reactive({
+      get_rounds_summ(request_summ())
+    })
+
     output$camp_displayed <- renderText({
       glue::glue("{nrow(request_summ())}")
     })
-    
-    output$camp_displayed_info <- renderText({
 
-      n_req_country <- reactive({ nrow(app_data$request %>% filter(iso_a3 == input$country, r_status == "Approved")) })
-      
-      percent_lab <- scales::percent( nrow(request_summ()) /n_req_country(), accuracy = 1)
-      
+    output$camp_displayed_info <- renderText({
+      n_req_country <- reactive({
+        nrow(app_data$request %>% filter(iso_a3 == input$country, r_status == "Approved"))
+      })
+
+      percent_lab <- scales::percent(nrow(request_summ()) / n_req_country(), accuracy = 1)
+
       glue::glue("out of {n_req_country()} ({percent_lab}) due to missing data")
-      
     })
-    
+
     output$react_camp <- renderText({
-      glue::glue( "{fmt_count(request_summ(), campaign_type == 'Reactive')}" )
+      glue::glue("{fmt_count(request_summ(), campaign_type == 'Reactive')}")
     })
-    
+
     output$react_camp_info <- renderText({
-      glue::glue( "{fmt_count(request_summ(), n_rounds == 'single dose')} single dose campaigns" )
+      glue::glue("{fmt_count(request_summ(), n_rounds == 'single dose')} single dose campaigns")
     })
-    
+
     output$dose_admi <- renderText({
       glue::glue("{fmt_n_dose(sum(request_summ()$total_doses))}")
     })
-    
+
     output$dose_admi_info <- renderText({
-      
       n <- sum(request_summ()$n_d2)
-      percent_dose <- n/sum(request_summ()$total_doses)
+      percent_dose <- n / sum(request_summ()$total_doses)
       percent_lab <- scales::percent(percent_dose, accuracy = 1)
-      
+
       glue::glue("{fmt_n_dose(n)} ({percent_lab}) second doses")
     })
-    
+
     output$target_areas <- renderText({
       admin_label <- admin_label()[[2]]
       glue::glue("{unique_admin()$unique_adm2} {admin_label}s")
     })
-    
+
     output$target_areas_info <- renderText({
       admin_label <- admin_label()[[1]]
       glue::glue("in {unique_admin()$unique_adm1} {admin_label}s")
     })
-    
-    output$last_camp <- renderText({
 
+    output$last_camp <- renderText({
       req(latest_camp())
       # browser()
-      
+
       # date_var <- if( latest_camp()$n_rounds == "two doses" ) { sym("date_end_d2") } else { sym("date_end_d1") }
-      
+
       date_end <- latest_camp() %>% pull(date_max)
-      
+
       length <- time_length(lubridate::interval(date_end, Sys.Date()), "days")
-      
-      length_cat  <- case_when(
+
+      length_cat <- case_when(
         length < 180 ~ "0-6 months ago",
         length >= 180 & length < 365 ~ "6m-1 year ago",
         length >= 365 & length < 1080 ~ "1-3 year ago",
-        length >= 1080 ~ "more than 3 years ago" ) 
-      
+        length >= 1080 ~ "more than 3 years ago"
+      )
+
       glue::glue("{length_cat}")
-      
     })
-    
+
     output$last_camp_info <- renderText({
-      
       # n_var <- if( latest_camp()$n_rounds == "two doses" ) { sym("n_d2") } else { sym("n_d1") }
       # n_label <- if(n_var == "n_d2") { "second"} else { "first" }
-      
+
       glue::glue("{ fmt_n_dose( latest_camp()$n_d1 ) } 1st doses. { fmt_n_dose( latest_camp()$n_d2 ) } 2nd doses.")
-      
     })
-    
+
     # TIMEVIS/BARCHART ==========================
-    
+
     output$timevis <- timevis::renderTimevis({
       req(nrow(country_df()) > 0)
       validate(need(nrow(country_df()) > 0, "No data to display"))
@@ -479,13 +481,13 @@ mod_country_profile_server <- function(id, prep_dat) {
           title = str_replace(content, "D", "Dose "),
           style = if_else(content == "D1", "background: steelblue;", "background: orange;")
         )
-      
+
       df_groups <- distinct(df_tv, id = group) %>%
         mutate(content = glue::glue("<b>{id}</b>")) %>%
         arrange(id)
-      
+
       date_range <- range(c(df_tv$start, df_tv$end), na.rm = TRUE)
-      
+
       timevis(
         data = df_tv,
         group = df_groups,
@@ -496,12 +498,12 @@ mod_country_profile_server <- function(id, prep_dat) {
         height = 300
       )
     })
-    
+
     output$chart <- highcharter::renderHighchart({
       validate(need(isTruthy(nrow(rounds_summ()) > 0), "No data to display"))
-      
+
       y_lab <- names(bar_var[bar_var == isolate(input$bar_unit)])
-      
+
       rounds_summ() %>%
         mutate(
           campaign_type = str_to_lower(campaign_type),
@@ -527,8 +529,9 @@ mod_country_profile_server <- function(id, prep_dat) {
         hc_plotOptions(column = list(stacking = NULL)) %>%
         hc_yAxis(title = list(text = y_lab), crosshair = FALSE) %>%
         hc_xAxis(title = list(text = "Request id"), crosshair = FALSE) %>%
-        hc_tooltip(formatter = JS(
-          "function(){
+        hc_tooltip(
+          formatter = JS(
+            "function(){
             outHTML =  '<b>' + this.point.request_id + '</b> - <i>' + this.point.dose +'<br>' + this.point.n_rounds + ' ' +
             this.point.campaign_type + '</i> campaign' +  '<br><b>Target:</b> ' + this.point.target_type +
             '(' + this.point.target_pop + ')<br>' + '<b>Doses administered:</b> ' + this.point.n_label + '<br> <b>Coverage:</b> ' + this.point.cov_label
@@ -536,12 +539,13 @@ mod_country_profile_server <- function(id, prep_dat) {
             return(outHTML)
             }
             "
-        )) %>%
+          )
+        ) %>%
         my_hc_export()
     })
-    
+
     # MAPS and TABLE ============================================
-    
+
     # prepare the data for map
     map_df <- reactive({
       req(country_df())
@@ -562,16 +566,15 @@ mod_country_profile_server <- function(id, prep_dat) {
         )
       }
       return(map_df)
-    }) 
-    
-    
+    })
+
     # geo reference the map_df using geodata and the input$admin_level
     geo_select <- reactive({
       geo_data[[input$admin_level]]
     })
-    
+
     rv <- reactiveValues()
-    
+
     observe({
       req(map_df())
       req(geo_select())
@@ -582,11 +585,11 @@ mod_country_profile_server <- function(id, prep_dat) {
       geo_name_col <- geo_select()$name_var
       geo_name_col_sym <- rlang::sym(geo_name_col)
       geo_layer_name <- geo_select()$layer_name
-      
+
       # filter sf polygons to only those found in dataset
       sf <- geo_select()$sf
       sf <- inner_join(sf, map_df(), by = c("adm0_iso3", geo_join))
-      
+
       # save as reactive values
       rv$geo_join <- geo_join
       rv$geo_col <- geo_col
@@ -596,12 +599,11 @@ mod_country_profile_server <- function(id, prep_dat) {
       rv$geo_layer_name <- geo_layer_name
       rv$sf <- sf
     })
-    
+
     # MAP
     output$map <- leaflet::renderLeaflet({
-      
       bbox <- sf::st_bbox(filter(sf_world, iso_a3 == "CMR"))
-      
+
       leaflet::leaflet() %>%
         leaflet::fitBounds(bbox[["xmin"]], bbox[["ymin"]], bbox[["xmax"]], bbox[["ymax"]]) %>%
         leaflet::addMapPane(name = "choropleth", zIndex = 300) %>%
@@ -624,31 +626,30 @@ mod_country_profile_server <- function(id, prep_dat) {
       # leaflet::addProviderTiles("OpenStreetMap", group = "OSM") %>%
       # leaflet::addProviderTiles("OpenStreetMap.HOT", group = "OSM HOT") %>%
       # leaflet.extras::addFullscreenControl(position = "topleft") %>%
-    }) 
-    
+    })
+
     # Observe the map
     observe({
-      
       leaflet::leafletProxy("map", session) %>%
         leaflet::clearGroup("Choropleth") %>%
         leaflet::removeControl("choro_leg")
-      
+
       boundaries <- rv$sf
       req(nrow(isolate(boundaries)) > 0)
-      
+
       cov_var <- paste0("cov_", input$dose_var)
       last_round_var <- paste0(input$dose_var, "_datecat")
-      
+
       tt <- get_tooltip(
         df = boundaries,
         admin = rv$geo_name_col_sym,
         dose_type = input$dose_var
       )
-      
+
       # Call the color function
       cov_pal <- colorNumeric("YlOrRd", domain = boundaries[[cov_var]])
       last_round_pal <- colorFactor("Dark2", domain = last_round_cat)
-      
+
       if (input$choro_var == "Coverage") {
         leaflet::leafletProxy("map", session) %>%
           leaflet::addPolygons(
@@ -658,7 +659,7 @@ mod_country_profile_server <- function(id, prep_dat) {
             color = "black",
             stroke = TRUE,
             weight = 1,
-            label = tt, 
+            label = tt,
             group = "Choropleth",
             highlightOptions = leaflet::highlightOptions(bringToFront = TRUE, weight = 3),
             options = leaflet::pathOptions(pane = "choropleth")
@@ -696,27 +697,26 @@ mod_country_profile_server <- function(id, prep_dat) {
             layerId = "choro_leg"
           )
       }
-      
+
       bbox <- sf::st_bbox(boundaries)
       leaflet::leafletProxy("map", session) %>%
         leaflet::flyToBounds(bbox[["xmin"]], bbox[["ymin"]], bbox[["xmax"]], bbox[["ymax"]])
     })
-    
+
     minicharts_init <- reactiveVal(TRUE)
-    
+
     observe({
-      
-      if (isTruthy("Doses" %in% isolate(input$map_groups)) | minicharts_init())  {
+      if (isTruthy("Doses" %in% isolate(input$map_groups)) | minicharts_init()) {
         leaflet::leafletProxy("map", session) %>%
           leaflet.minicharts::clearMinicharts()
-        
+
         # req(nrow(isolate(country_df())) > 0)
         boundaries <- rv$sf
         req(nrow(isolate(boundaries)) > 0)
         n_dose <- paste0(input$dose_var, "_dose_adm")
         # circle width
         pie_width <- (input$circle_size_mult * 10) * sqrt(boundaries[[n_dose]]) / sqrt(max(boundaries[[n_dose]]))
-        
+
         leaflet::leafletProxy("map", session) %>%
           leaflet.minicharts::addMinicharts(
             lng = boundaries$lon,
@@ -729,7 +729,7 @@ mod_country_profile_server <- function(id, prep_dat) {
             type = "pie",
             width = pie_width
           )
-        
+
         minicharts_init(FALSE)
       } else {
         leaflet::leafletProxy("map", session) %>%
@@ -742,13 +742,14 @@ mod_country_profile_server <- function(id, prep_dat) {
         #   width = 0
         # )
       }
-    })  %>% bindEvent(rv$sf, input$dose_var, rv$geo_name_col, input$circle_size_mult)
-    
+    }) %>%
+      bindEvent(rv$sf, input$dose_var, rv$geo_name_col, input$circle_size_mult)
+
     observeEvent(input$map_groups, {
       boundaries <- isolate(rv$sf)
       if (!"Doses" %in% input$map_groups) {
         leaflet::leafletProxy("map", session) %>%
-          leaflet.minicharts::clearMinicharts() 
+          leaflet.minicharts::clearMinicharts()
         # leaflet.minicharts::updateMinicharts(
         #   layerId = boundaries[[isolate(rv$geo_name_col)]],
         #   chartdata = 1,
@@ -782,13 +783,13 @@ mod_country_profile_server <- function(id, prep_dat) {
         # )
       }
     })
-    
+
     # TABLE
     output$tbl <- reactable::renderReactable({
       validate(need(isTruthy(nrow(request_summ()) > 0), "No data to display"))
       if (length(input$campaign)) {
-        df_rt <- request_summ() %>% 
-          filter(request_id %in% input$campaign) %>% 
+        df_rt <- request_summ() %>%
+          filter(request_id %in% input$campaign) %>%
           summ_tab_data()
       } else {
         df_rt <- request_summ() %>% summ_tab_data()
@@ -825,19 +826,19 @@ prep_data <- function(target_area_df) {
       campaign_type = t_campaign_type,
       campaign_strategy = t_campaign_strategy,
       target_area_pop = t_target_area_population,
-      target_pop  = t_target_population,
+      target_pop = t_target_population,
       target_type = t_target_type,
       target_type_details = t_target_type_details,
       date_start_d1 = t_d1_date_round_start,
       date_end_d1 = t_d1_date_round_end,
-      d1_dose_adm  = t_d1_dose_adm,
+      d1_dose_adm = t_d1_dose_adm,
       d1_cov_adm = t_d1_cov_adm,
       date_start_d2 = t_d2_date_round_start,
-      date_end_d2  = t_d2_date_round_end,
+      date_end_d2 = t_d2_date_round_end,
       d2_dose_adm = t_d2_dose_adm,
       d2_cov_adm = t_d2_cov_adm,
       d2_drop_n = t_d2_drop_n,
-      d2_drop_p  = t_d2_drop_p,
+      d2_drop_p = t_d2_drop_p,
       comments = t_comments
     ) %>%
     # add a variable saying if there is one or two dose for the campaign
@@ -878,12 +879,12 @@ prep_data <- function(target_area_df) {
     mutate(
       d1_cov_adm = d1_dose_adm / target_pop,
       d2_cov_adm = d2_dose_adm / target_pop
-    ) |> 
-    rowwise() |> 
+    ) |>
+    rowwise() |>
     mutate(
       date_min = min(c_across(contains("date_")), na.rm = TRUE),
       date_max = max(c_across(contains("date_")), na.rm = TRUE)
-    ) |> 
+    ) |>
     ungroup()
 }
 
@@ -919,7 +920,7 @@ get_request_summ <- function(country_df) {
       .groups = "drop"
     ) %>%
     mutate(total_doses = n_d1 + n_d2)
-  
+
   return(req_summ)
 }
 
@@ -965,7 +966,7 @@ summ_tab_data <- function(df) {
       "Campaign type" = campaign_type,
       "Number of rounds" = n_rounds,
       "Number of targeted areas" = n_target_area,
-      "Smallest area recorded"  = smallest_target,
+      "Smallest area recorded" = smallest_target,
       "Target population" = target_type,
       "Size of target population" = target_pop,
       "Dose 1 round dates" = date_range_d1,
@@ -984,26 +985,25 @@ summ_tab_data <- function(df) {
 # get the map data filtered and grouped
 
 get_map_data <- function(country_df, filter_var, admin_level) {
-
   # browser()
-  
+
   n_rounds <- unique(country_df$n_rounds)
   admin_sym <- sym(paste0(admin_level, "_pcode"))
-  
+
   if (nrow(country_df) < 1) {
     return(dplyr::tibble(adm0_iso3 = character(), !!admin_sym := character()))
   }
-  
+
   df <- country_df %>% group_by(!!admin_sym)
 
   if (filter_var == "largest_pop") {
     df <- df %>% filter(target_pop == max(target_pop))
   } else {
-    df <- df %>% 
-      mutate(date_end = coalesce(date_end_d2, date_end_d1, date_start_d2, date_start_d1)) |> 
+    df <- df %>%
+      mutate(date_end = coalesce(date_end_d2, date_end_d1, date_start_d2, date_start_d1)) |>
       filter(date_end == max(date_end))
   }
-  
+
   # if (filter_var == "largest_pop") {
   #   df <- df %>% filter(target_pop == max(target_pop))
   # } else if (filter_var == "latest_date" & isTruthy(n_rounds == "one dose")) {
@@ -1011,9 +1011,9 @@ get_map_data <- function(country_df, filter_var, admin_level) {
   # } else {
   #   df <- df %>% filter(date_end_d2 == max(date_end_d2))
   # }
-  
+
   df %>%
-    group_by(request_id, adm0_iso3 = country_code, !!admin_sym) %>% 
+    group_by(request_id, adm0_iso3 = country_code, !!admin_sym) %>%
     summarise(
       n_targets = n(),
       date_start_d1 = min(date_start_d1),
@@ -1063,15 +1063,16 @@ bar_var <- c("Doses counts" = "n", "Coverage" = "cov")
 last_round_cat <- c("0-6 months", "6m-1 year", "1-3 year", "more than 3 years")
 
 get_tooltip <- function(df, admin, dose_type) {
-  n_dose <- paste0(dose_type, "_dose_adm") 
-  dose_cov <- paste0("cov_", dose_type) 
+  n_dose <- paste0(dose_type, "_dose_adm")
+  dose_cov <- paste0("cov_", dose_type)
   lastround_var <- paste0(dose_type, "_datecat")
-  
+
   glue::glue(
     "<b>{df[[admin]]}</b><br>
        Last round: <b>{ df[[lastround_var]] }</b><br>
        Target population: <b>{fmt_n_dose(df$target_pop)}</b><br>
        Dose administered: <b>{ fmt_n_dose(df[[n_dose]]) }</b><br>
        Dose coverage: <b>{fmt_n_dose(df[[dose_cov]])} %</b><br>"
-  ) %>% purrr::map(htmltools::HTML)
+  ) %>%
+    purrr::map(htmltools::HTML)
 }

@@ -2,21 +2,31 @@ library(tidyverse)
 library(sf)
 library(fs)
 
+sf::sf_use_s2(FALSE)
+
 world_map_raw <- rnaturalearth::ne_countries(scale = "small", type = "countries", returnclass = "sf")
 
-sf_world <- world_map_raw %>% 
-  sf::st_transform(crs = "+proj=longlat +datum=WGS84") %>% 
-  select(country = name_long, iso_a3, iso_a2, pop_est) %>% 
-  filter(stringr::str_detect(country, "Antarctic", negate = TRUE)) %>% 
-  mutate(continent = countrycode::countrycode(iso_a3, origin = "iso3c", destination = "continent"),
-         region = countrycode::countrycode(iso_a3, origin = "iso3c", destination = "region")) %>% 
-  cbind(sf::st_coordinates(sf::st_centroid(., of_largest_polygon = TRUE))) %>% 
-  rename(lon = X, lat = Y) %>% 
-  select(continent, region, everything())
+# sf_world |> filter(country %in% c("Northern Cyprus", "Somaliland", "Kosovo"))
+
+sf_world <- world_map_raw %>%
+  sf::st_transform(crs = "+proj=longlat +datum=WGS84") %>%
+  select(country = name_long, iso_a3, sov_a3, iso_a2, pop_est) %>%
+  filter(stringr::str_detect(country, "Antarctic", negate = TRUE)) %>%
+  mutate(
+    iso_a3 = na_if(iso_a3, "-99"),
+    iso_a2 = na_if(iso_a2, "-99"),
+    iso_a3 = coalesce(iso_a3, sov_a3),
+    continent = countrycode::countrycode(iso_a3, origin = "iso3c", destination = "continent"),
+    region = countrycode::countrycode(iso_a3, origin = "iso3c", destination = "region")
+  ) %>%
+  cbind(sf::st_coordinates(sf::st_centroid(., of_largest_polygon = TRUE))) %>%
+  rename(lon = X, lat = Y) %>%
+  select(continent, region, everything()) |>
+  select(-sov_a3)
 
 saveRDS(sf_world, here::here("data", "sf_world.rds"))
 
-#shp for CMR 
+#shp for CMR
 
 get_admin_level <- function(obt_gb_path, country, level) {
   require("sf")
@@ -36,7 +46,7 @@ saveRDS(adm1, here::here("data", "cmr_adm1.rds"))
 saveRDS(adm2, here::here("data", "cmr_adm2.rds"))
 saveRDS(adm3, here::here("data", "cmr_adm3.rds"))
 
-#import admin_level dictionnary 
+#import admin_level dictionnary
 admin_dict <- readxl::read_xlsx(here::here(obt_gb_path, "dict_Admin_level.xlsx"))
 
 saveRDS(admin_dict, here::here("data", "admin_dict.rds"))
